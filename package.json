@@ -1,0 +1,50 @@
+{
+  "name": "@euhenio/pi-buddy",
+  "version": "2.4.1",
+  "description": "Тамагочи для pi: питомец сбоку от поля ввода — пиксельные ВЕО, овчарка, кот, утка, сова, дракон и другие; реагирует на работу агента",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "buddy",
+    "tamagotchi"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "extensions",
+    "src",
+    "README.md",
+    "preview.png"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/buddy.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-tui": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    }
+  },
+  "author": "euhenio",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
