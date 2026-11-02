@@ -2,13 +2,15 @@
 
 Тамагочи для [pi](https://pi.dev): питомец живёт в полосе справа от поля ввода и реагирует на работу агента — идёт, пока агент работает, виляет хвостом после успешного хода, грустит на ошибках, засыпает в простое.
 
+[Исходный код на GitHub](https://github.com/e-davidenko/pi-buddy) · [Сообщить об ошибке](https://github.com/e-davidenko/pi-buddy/issues/new)
+
 ![preview](preview.png)
 
 ## Установка
 
 ```bash
 pi install ./pi-buddy                              # из локальной папки
-pi install git:github.com/<you>/pi-buddy@v1.0.0    # из git
+pi install git:github.com/e-davidenko/pi-buddy      # из git
 pi install npm:@euhenio/pi-buddy                   # из npm
 ```
 
@@ -75,6 +77,14 @@ pi install npm:@euhenio/pi-buddy                   # из npm
 Явная команда `/buddy hatch` по-прежнему создаёт нового питомца со сбросом опыта.
 
 Расширение само в сеть не ходит; к модели pi обращаются только `/buddy learn` и инструмент `buddy_phrases`.
+
+## Ошибки и предложения
+
+Нашли ошибку или хотите предложить улучшение? [Создайте issue на GitHub](https://github.com/e-davidenko/pi-buddy/issues/new).
+Перед этим проверьте [существующие обсуждения](https://github.com/e-davidenko/pi-buddy/issues) — возможно, проблема уже известна.
+
+Для сообщения об ошибке укажите версии pi и pi-buddy, ОС и терминал, шаги для повторения,
+ожидаемое и фактическое поведение. Если проблема связана с отображением, приложите скриншот.
 
 ## Устройство кода
 
