@@ -4,7 +4,9 @@
 
 [Исходный код на GitHub](https://github.com/e-davidenko/pi-buddy) · [Сообщить об ошибке](https://github.com/e-davidenko/pi-buddy/issues/new)
 
-![preview](preview.png)
+![Демо pi-buddy: ВЕО и уточка, субагенты, реакции, реплики и игры](https://raw.githubusercontent.com/e-davidenko/pi-buddy/main/media/demo.gif)
+
+*30 секунд: основные возможности на настоящих спрайтах питомцев. Постановочное демо.*
 
 ## Установка
 
