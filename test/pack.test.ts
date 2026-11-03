@@ -114,3 +114,22 @@ test("опрос status.json не чаще раза в секунду", () => {
   t.poll();
   assert.equal(reads, 2);
 });
+
+test("общий исход стаи остаётся неудачным, когда последний фоновый запуск успешен", () => {
+  const { t, homes } = tracker();
+  t.asyncStarted({ id: "a", agent: "first" });
+  t.asyncStarted({ id: "b", agent: "last" });
+  t.asyncComplete({ runId: "a", success: false });
+  assert.equal(homes.length, 0);
+  t.asyncComplete({ runId: "b", success: true });
+  assert.deepEqual(homes, [[false, 0, 0]]);
+  t.asyncComplete({ runId: "b", success: true });
+  assert.equal(homes.length, 1);
+});
+
+test("ошибка внутри details делает возвращение неуспешным даже без isError оболочки", () => {
+  const { t, homes } = tracker();
+  t.toolStart("x", { agent: "worker" });
+  t.toolEnd("x", { results: [{ exitCode: 1, usage: { turns: 2 } }] }, false);
+  assert.deepEqual(homes, [[false, 2, 0]]);
+});

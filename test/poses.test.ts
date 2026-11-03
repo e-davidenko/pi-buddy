@@ -28,13 +28,15 @@ function machine(o: { working?: boolean; quiet?: boolean; herding?: boolean; noA
 }
 const W: Mood = "work";
 
-test("быстрые инструменты видны по очереди, каждый не меньше 3 с", () => {
+test("быстрые инструменты видны по очереди, каждый не меньше 5 с", () => {
   const { pm, c } = machine();
   pm.setAct("sniff");
   pm.setAct("dig");
   pm.setAct("alert");
   assert.equal(pm.state(W), "sniff");
-  c.advance(ACT_MIN_MS);
+  c.advance(4999);
+  assert.equal(pm.state(W), "sniff");
+  c.advance(1);
   assert.equal(pm.state(W), "dig");
   c.advance(ACT_MIN_MS - 1);
   assert.equal(pm.state(W), "dig");

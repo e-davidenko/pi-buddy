@@ -1,0 +1,708 @@
+{
+  "scope": "Curated mutations in rules, mood, commands, buddy and pack; not an exhaustive mutation score",
+  "sandbox": "/var/folders/5v/lzdwbqbd02983mr3pt7b9cl40000gn/T/pi-buddy-mutations-ruhlTK",
+  "counts": {
+    "killed": 61,
+    "survived": 0,
+    "error": 0
+  },
+  "results": [
+    {
+      "file": "src/domain/rules.ts",
+      "from": "Math.min(100, v)",
+      "to": "Math.min(99, v)",
+      "line": 31,
+      "status": "killed",
+      "failures": [
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает",
+        "not ok 54 - шкалы сами возвращаются к базе и не выходят за 0..100",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость",
+        "not ok 88 - несколько процессов сохраняют все приращения опыта"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "Math.floor(Math.sqrt(xp / 10))",
+      "to": "Math.ceil(Math.sqrt(xp / 10))",
+      "line": 32,
+      "status": "killed",
+      "failures": [
+        "not ok 53 - уровень: ⌊√(xp/10)⌋ + 1, без потолка",
+        "not ok 68 - взрослый облик доступен с пятого уровня включительно"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "level(xp) >= GROW_LEVEL",
+      "to": "level(xp) > GROW_LEVEL",
+      "line": 33,
+      "status": "killed",
+      "failures": [
+        "not ok 68 - взрослый облик доступен с пятого уровня включительно"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "if (x < acc)",
+      "to": "if (x <= acc)",
+      "line": 48,
+      "status": "killed",
+      "failures": [
+        "not ok 69 - границы весов редкости не перекрываются"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "(h >>> 24) % 100 === 0",
+      "to": "false",
+      "line": 69,
+      "status": "killed",
+      "failures": [
+        "not ok 70 - shiny существует и детерминирован seed"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "if (hours <= 0) return;",
+      "to": "if (false) return;",
+      "line": 88,
+      "status": "killed",
+      "failures": [
+        "not ok 67 - восстановление экспоненциальное и не зависит от частоты тиков"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "clamp(base + (v - base) * Math.exp(-hours / tau))",
+      "to": "clamp(base + (v - base) * Math.exp(-hours * tau))",
+      "line": 90,
+      "status": "killed",
+      "failures": [
+        "not ok 67 - восстановление экспоненциальное и не зависит от частоты тиков"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.lastTick = now;",
+      "to": "s.lastTick = s.lastTick;",
+      "line": 94,
+      "status": "killed",
+      "failures": [
+        "not ok 67 - восстановление экспоненциальное и не зависит от частоты тиков"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "disk.born !== base.born",
+      "to": "disk.born === base.born",
+      "line": 124,
+      "status": "killed",
+      "failures": [
+        "not ok 1 - ошибка записи не теряет локальный XP и настройки при повторной синхронизации",
+        "not ok 2 - ошибка чтения не перезаписывает файл и не сбрасывает локальный прогресс",
+        "not ok 3 - каждый turn сохраняется до завершения всего запроса",
+        "not ok 4 - checkpoint сохраняет инструменты посреди длинного запроса",
+        "not ok 5 - опрос состояния другого терминала не удваивает локальные приращения",
+        "not ok 7 - начало работы прерывает только сон, сохраняет силы и другие реакции",
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 9 - успешное завершение даёт радость и увеличивает серию",
+        "not ok 10 - серия нескольких терминалов учитывает успехи и сбросы в порядке сохранения",
+        "not ok 11 - ошибка сохранения и повторный polling не теряют и не дублируют завершения",
+        "not ok 12 - после сохранения настройки другой терминал может поменять её без обратного перетирания",
+        "not ok 13 - polling сохраняет локальный несохранённый XP при следующей записи",
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 17 - прямая команда выбирает ВЕО без меню и сохраняет имя и опыт",
+        "not ok 18 - выбор из меню использует ключ вида и сохраняет выбранного пса",
+        "not ok 22 - подсказки и прямая команда не зависят от регистра",
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает",
+        "not ok 26 - mute и unmute сохраняют настройку",
+        "not ok 27 - choose сохраняет жизнь и shiny, меняет только вид и его редкость",
+        "not ok 30 - имя ограничено 20 символами",
+        "not ok 57 - несколько терминалов: счётчики складываются, уровень не откатывается",
+        "not ok 58 - несколько терминалов: настройки — только изменённые здесь",
+        "not ok 59 - устаревший файл не откатывает уже известный опыт и счётчики",
+        "not ok 60 - новое яйцо в другом терминале не наследует опыт прежнего питомца",
+        "not ok 61 - несколько терминалов: шкалы — приращениями",
+        "not ok 71 - слияние берёт свежую активность и применяет завершения к общей серии по порядку"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "Math.max(local, (disk[k] ?? 0) + Math.max(0, local - (base[k] ?? 0)))",
+      "to": "(disk[k] ?? 0) + Math.max(0, local - (base[k] ?? 0))",
+      "line": 128,
+      "status": "killed",
+      "failures": [
+        "not ok 59 - устаревший файл не откатывает уже известный опыт и счётчики"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "dg[k] + (mine[k] - bg[k])",
+      "to": "dg[k] - (mine[k] - bg[k])",
+      "line": 132,
+      "status": "killed",
+      "failures": [
+        "not ok 7 - начало работы прерывает только сон, сохраняет силы и другие реакции",
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 9 - успешное завершение даёт радость и увеличивает серию",
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает",
+        "not ok 61 - несколько терминалов: шкалы — приращениями"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "if (dirty.has(k))",
+      "to": "if (!dirty.has(k))",
+      "line": 133,
+      "status": "killed",
+      "failures": [
+        "not ok 1 - ошибка записи не теряет локальный XP и настройки при повторной синхронизации",
+        "not ok 12 - после сохранения настройки другой терминал может поменять её без обратного перетирания",
+        "not ok 17 - прямая команда выбирает ВЕО без меню и сохраняет имя и опыт",
+        "not ok 18 - выбор из меню использует ключ вида и сохраняет выбранного пса",
+        "not ok 22 - подсказки и прямая команда не зависят от регистра",
+        "not ok 26 - mute и unmute сохраняют настройку",
+        "not ok 27 - choose сохраняет жизнь и shiny, меняет только вид и его редкость",
+        "not ok 30 - имя ограничено 20 символами",
+        "not ok 58 - несколько терминалов: настройки — только изменённые здесь"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "hadErrors ? 0 : streak + 1",
+      "to": "hadErrors ? streak : streak + 1",
+      "line": 134,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 10 - серия нескольких терминалов учитывает успехи и сбросы в порядке сохранения",
+        "not ok 71 - слияние берёт свежую активность и применяет завершения к общей серии по порядку"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "Math.max(disk.lastActivity ?? 0, mine.lastActivity ?? 0)",
+      "to": "Math.min(disk.lastActivity ?? 0, mine.lastActivity ?? 0)",
+      "line": 136,
+      "status": "killed",
+      "failures": [
+        "not ok 71 - слияние берёт свежую активность и применяет завершения к общей серии по порядку"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "Math.min(GAIN.tokFoodMax, out * GAIN.tokFood)",
+      "to": "out * GAIN.tokFood",
+      "line": 146,
+      "status": "killed",
+      "failures": [
+        "not ok 66 - токены дают XP за полные тысячи, бонус еды ограничен восемью"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.energy + GAIN.genEnergy",
+      "to": "s.energy - GAIN.genEnergy",
+      "line": 147,
+      "status": "killed",
+      "failures": [
+        "not ok 55 - генерация кормит, утомляет и даёт опыт",
+        "not ok 66 - токены дают XP за полные тысячи, бонус еды ограничен восемью"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "Math.floor(out * GAIN.tokXp)",
+      "to": "Math.ceil(out * GAIN.tokXp)",
+      "line": 148,
+      "status": "killed",
+      "failures": [
+        "not ok 66 - токены дают XP за полные тысячи, бонус еды ограничен восемью"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.toolCalls++;",
+      "to": "s.toolCalls += 0;",
+      "line": 153,
+      "status": "killed",
+      "failures": [
+        "not ok 4 - checkpoint сохраняет инструменты посреди длинного запроса",
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.xp += GAIN.toolXp;",
+      "to": "s.xp += 0;",
+      "line": 154,
+      "status": "killed",
+      "failures": [
+        "not ok 4 - checkpoint сохраняет инструменты посреди длинного запроса",
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.energy + GAIN.toolEnergy",
+      "to": "s.energy - GAIN.toolEnergy",
+      "line": 155,
+      "status": "killed",
+      "failures": [
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.joy + GAIN.toolJoy",
+      "to": "s.joy - GAIN.toolJoy",
+      "line": 159,
+      "status": "killed",
+      "failures": [
+        "not ok 9 - успешное завершение даёт радость и увеличивает серию",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.errors++;",
+      "to": "s.errors += 0;",
+      "line": 163,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.joy + GAIN.errJoy",
+      "to": "s.joy - GAIN.errJoy",
+      "line": 164,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "s.toolCalls += tools;",
+      "to": "s.toolCalls += 0;",
+      "line": 170,
+      "status": "killed",
+      "failures": [
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 65 - стая приносит весь опыт при любом исходе и меняет радость один раз"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "gens * GAIN.genXp + tools * GAIN.toolXp",
+      "to": "gens * GAIN.genXp - tools * GAIN.toolXp",
+      "line": 171,
+      "status": "killed",
+      "failures": [
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 65 - стая приносит весь опыт при любом исходе и меняет радость один раз"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "i.now < i.tempUntil",
+      "to": "i.now <= i.tempUntil",
+      "line": 18,
+      "status": "killed",
+      "failures": [
+        "not ok 32 - приоритет: временная реакция, работа, сон, грусть, радость"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "if (i.working)",
+      "to": "if (!i.working)",
+      "line": 19,
+      "status": "killed",
+      "failures": [
+        "not ok 7 - начало работы прерывает только сон, сохраняет силы и другие реакции",
+        "not ok 31 - пороги настроения: ниже, ровно и выше",
+        "not ok 32 - приоритет: временная реакция, работа, сон, грусть, радость",
+        "not ok 33 - ложится и засыпает ровно в срок, стая удерживает от сна кроме истощения",
+        "not ok 52 - настроение: засыпает от простоя, но не пока стая в деле; без сил — всегда"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "i.energy < 10",
+      "to": "i.energy <= 10",
+      "line": 21,
+      "status": "killed",
+      "failures": [
+        "not ok 31 - пороги настроения: ниже, ровно и выше"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "!i.herding()",
+      "to": "i.herding()",
+      "line": 21,
+      "status": "killed",
+      "failures": [
+        "not ok 33 - ложится и засыпает ровно в срок, стая удерживает от сна кроме истощения",
+        "not ok 52 - настроение: засыпает от простоя, но не пока стая в деле; без сил — всегда"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "i.joy < 30",
+      "to": "i.joy <= 30",
+      "line": 22,
+      "status": "killed",
+      "failures": [
+        "not ok 31 - пороги настроения: ниже, ровно и выше"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "i.joy > 80",
+      "to": "i.joy >= 80",
+      "line": 23,
+      "status": "killed",
+      "failures": [
+        "not ok 31 - пороги настроения: ниже, ровно и выше"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": "i.food > 60",
+      "to": "i.food >= 60",
+      "line": 23,
+      "status": "killed",
+      "failures": [
+        "not ok 31 - пороги настроения: ниже, ровно и выше"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": ">= i.idleSleepMs",
+      "to": "> i.idleSleepMs",
+      "line": 21,
+      "status": "killed",
+      "failures": [
+        "not ok 33 - ложится и засыпает ровно в срок, стая удерживает от сна кроме истощения",
+        "not ok 88 - несколько процессов сохраняют все приращения опыта"
+      ]
+    },
+    {
+      "file": "src/domain/mood.ts",
+      "from": ">= REST_AFTER_MS",
+      "to": "> REST_AFTER_MS",
+      "line": 35,
+      "status": "killed",
+      "failures": [
+        "not ok 33 - ложится и засыпает ровно в срок, стая удерживает от сна кроме истощения"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().food > 95",
+      "to": "s().food >= 95",
+      "line": 50,
+      "status": "killed",
+      "failures": [
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().food + 30",
+      "to": "s().food - 30",
+      "line": 52,
+      "status": "killed",
+      "failures": [
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().joy + 15",
+      "to": "s().joy - 15",
+      "line": 59,
+      "status": "killed",
+      "failures": [
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().energy < 15",
+      "to": "s().energy <= 15",
+      "line": 64,
+      "status": "killed",
+      "failures": [
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().energy - 15",
+      "to": "s().energy + 15",
+      "line": 71,
+      "status": "killed",
+      "failures": [
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().energy + 40",
+      "to": "s().energy - 40",
+      "line": 78,
+      "status": "killed",
+      "failures": [
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().rarity = SPECIES[key].rarity;",
+      "to": "s().rarity = s().rarity;",
+      "line": 110,
+      "status": "killed",
+      "failures": [
+        "not ok 27 - choose сохраняет жизнь и shiny, меняет только вид и его редкость",
+        "not ok 88 - несколько процессов сохраняют все приращения опыта"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().muted = true;",
+      "to": "s().muted = false;",
+      "line": 119,
+      "status": "killed",
+      "failures": [
+        "not ok 26 - mute и unmute сохраняют настройку"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": ".slice(0, 20)",
+      "to": ".slice(0, 21)",
+      "line": 185,
+      "status": "killed",
+      "failures": [
+        "not ok 30 - имя ограничено 20 символами"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "if (!ok) {",
+      "to": "if (ok) {",
+      "line": 32,
+      "status": "killed",
+      "failures": [
+        "not ok 28 - hatch без подтверждения и отмена ничего не меняют",
+        "not ok 29 - hatch сбрасывает жизнь, сохраняет настройки и заменяет питомца даже в ту же миллисекунду"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "app.sync();",
+      "to": "// removed save",
+      "line": 218,
+      "status": "killed",
+      "failures": [
+        "not ok 17 - прямая команда выбирает ВЕО без меню и сохраняет имя и опыт",
+        "not ok 18 - выбор из меню использует ключ вида и сохраняет выбранного пса",
+        "not ok 22 - подсказки и прямая команда не зависят от регистра",
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает",
+        "not ok 26 - mute и unmute сохраняют настройку",
+        "not ok 27 - choose сохраняет жизнь и shiny, меняет только вид и его редкость",
+        "not ok 29 - hatch сбрасывает жизнь, сохраняет настройки и заменяет питомца даже в ту же миллисекунду",
+        "not ok 30 - имя ограничено 20 символами"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "if (this.headless) return;",
+      "to": "if (false) return;",
+      "line": 159,
+      "status": "killed",
+      "failures": [
+        "not ok 6 - headless-процесс не сохраняет опыт родительского питомца"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "this.dirty.clear();\n        this.runEnds = [];",
+      "to": "// retain dirty\n        this.runEnds = [];",
+      "line": 171,
+      "status": "killed",
+      "failures": [
+        "not ok 12 - после сохранения настройки другой терминал может поменять её без обратного перетирания"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "this.base = { ...disk };",
+      "to": "this.base = { ...this.s };",
+      "line": 182,
+      "status": "killed",
+      "failures": [
+        "not ok 13 - polling сохраняет локальный несохранённый XP при следующей записи"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "onGeneration(this.s, out);",
+      "to": "// skip generation",
+      "line": 385,
+      "status": "killed",
+      "failures": [
+        "not ok 3 - каждый turn сохраняется до завершения всего запроса"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "onToolError(this.s);",
+      "to": "// skip error",
+      "line": 405,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "this.runErrors++;\n      this.errRow++;",
+      "to": "this.runErrors += 0;\n      this.errRow++;",
+      "line": 406,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 10 - серия нескольких терминалов учитывает успехи и сбросы в порядке сохранения"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "if (n % ticks(30_000) === 0) this.sync();",
+      "to": "if (false) this.sync();",
+      "line": 491,
+      "status": "killed",
+      "failures": [
+        "not ok 4 - checkpoint сохраняет инструменты посреди длинного запроса"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "errJoy: -10",
+      "to": "errJoy: -4",
+      "line": 20,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 63 - успех и ошибка инструментов дают опыт, но по-разному меняют радость",
+        "not ok 65 - стая приносит весь опыт при любом исходе и меняет радость один раз"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "if (!hadErrors) s.joy",
+      "to": "if (true) s.joy",
+      "line": 177,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 64 - завершение радует только без ошибок; ошибка сбрасывает серию без нового штрафа"
+      ]
+    },
+    {
+      "file": "src/domain/rules.ts",
+      "from": "(ok ? GAIN.runJoy : GAIN.errJoy)",
+      "to": "(ok ? GAIN.errJoy : GAIN.runJoy)",
+      "line": 172,
+      "status": "killed",
+      "failures": [
+        "not ok 15 - неудача стаи штрафуется один раз, XP сохраняется, повторный toolEnd не начисляет снова",
+        "not ok 65 - стая приносит весь опыт при любом исходе и меняет радость один раз"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "s().food = clamp(s().food - 5);",
+      "to": "s().food = clamp(s().food - 5); s().xp += 2;",
+      "line": 72,
+      "status": "killed",
+      "failures": [
+        "not ok 24 - уход меняет шкалы точно, насыщает до 100 и не приносит XP",
+        "not ok 25 - кормление разрешено при 95, а игра при 15 энергии; ниже сил не хватает"
+      ]
+    },
+    {
+      "file": "src/app/commands.ts",
+      "from": "(app.s as any)[key] = previous[key];",
+      "to": "(app.s as any)[key] = undefined;",
+      "line": 204,
+      "status": "killed",
+      "failures": [
+        "not ok 29 - hatch сбрасывает жизнь, сохраняет настройки и заменяет питомца даже в ту же миллисекунду"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "if (this.tempMood === \"sleep\")",
+      "to": "if (false)",
+      "line": 360,
+      "status": "killed",
+      "failures": [
+        "not ok 7 - начало работы прерывает только сон, сохраняет силы и другие реакции"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "this.s = saved;",
+      "to": "Object.assign(this.s, saved);",
+      "line": 169,
+      "status": "killed",
+      "failures": [
+        "not ok 16 - новое яйцо без опциональных счётчиков не наследует их из памяти старого питомца"
+      ]
+    },
+    {
+      "file": "src/app/buddy.ts",
+      "from": "this.runEnds.push(hadErrors);",
+      "to": "// lose pending outcome",
+      "line": 421,
+      "status": "killed",
+      "failures": [
+        "not ok 8 - ошибка сохраняет XP, штрафует на 10, завершение сбрасывает общую серию без бонуса",
+        "not ok 9 - успешное завершение даёт радость и увеличивает серию",
+        "not ok 10 - серия нескольких терминалов учитывает успехи и сбросы в порядке сохранения",
+        "not ok 11 - ошибка сохранения и повторный polling не теряют и не дублируют завершения"
+      ]
+    },
+    {
+      "file": "src/domain/pack.ts",
+      "from": "ok = ok && [...pack.runs.values()].every((r) => r.ok !== false) && !pack.pups.some((p) => p.status === \"err\");",
+      "to": "ok = ok;",
+      "line": 274,
+      "status": "killed",
+      "failures": [
+        "not ok 41 - общий исход стаи остаётся неудачным, когда последний фоновый запуск успешен"
+      ]
+    }
+  ]
+}

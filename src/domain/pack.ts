@@ -159,7 +159,7 @@ export class PackTracker {
       for (const m of Array.isArray(r?.messages) ? r.messages : [])
         if (m?.role === "assistant" && Array.isArray(m.content)) tools += m.content.filter((c: any) => c?.type === "toolCall").length;
     }
-    this.home(!isError, gens, tools);
+    this.home(!isError && !pack.pups.some((p) => p.status === "err"), gens, tools);
   }
 
   // ---- фоновые запуски ----
@@ -270,7 +270,8 @@ export class PackTracker {
   /** Все вернулись: щенки виляют PACK_LINGER_MS и разбегаются */
   private home(ok: boolean, gens = 0, tools = 0) {
     const pack = this.pack;
-    if (!pack) return;
+    if (!pack || !pack.running) return;
+    ok = ok && [...pack.runs.values()].every((r) => r.ok !== false) && !pack.pups.some((p) => p.status === "err");
     for (const r of pack.runs.values()) {
       gens += r.turns;
       tools += r.tools;

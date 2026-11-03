@@ -3,6 +3,7 @@
  * таймер анимации. Здесь же собираются порты (файлы, часы, окружение) и экран.
  */
 import * as os from "node:os";
+import { readFileSync } from "node:fs";
 import { BuddyApp } from "../../app/buddy.ts";
 import { COMMAND_HELP, completions, runCommand } from "../../app/commands.ts";
 import type { ModelPort } from "../../app/learn.ts";
@@ -21,6 +22,7 @@ function autoPxMode(): PxMode {
 }
 
 const processEnv = (): Env => ({
+  version: JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")).version,
   user: () => os.userInfo().username,
   host: () => os.hostname(),
   argv: process.argv.slice(2),
@@ -108,7 +110,7 @@ export function createBuddy(pi: any) {
   });
   pi.on("tool_execution_update", async (e: any) => app.pack.update(e?.toolCallId, e?.partialResult?.details));
   pi.on("tool_execution_end", async (e: any) => app.pack.toolEnd(e?.toolCallId, e?.result?.details, !!e?.isError));
-  pi.on("tool_result", async (e: any) => app.toolResult(String(e?.toolName ?? ""), e?.input, !e?.isError));
+  pi.on("tool_result", async (e: any) => app.toolResult(String(e?.toolName ?? ""), e?.input, !e?.isError, e?.toolCallId));
   pi.on("turn_end", async (e: any) => app.turnEnd(Number(e?.message?.usage?.output) || 0));
   pi.on("agent_end", async () => app.agentEnd());
   pi.on("session_shutdown", async () => {

@@ -64,6 +64,9 @@ export class BuddyApp {
   private levelAtStart = 1;
   workStart = 0;
   private runErrors = 0;
+  // Исходы запросов ждут успешной записи; polling их не подтверждает.
+  private runEnds: boolean[] = [];
+  private packErrors = new Set<string>();
   private errRow = 0;
   private lastPackSig = "";
   private syncError = "";
@@ -119,7 +122,12 @@ export class BuddyApp {
           if (!this.s.muted) this.say(this.packGo(n), 3500);
         },
         home: (ok, gens, tools) => {
-          onPackReturn(this.s, gens, tools);
+          onPackReturn(this.s, gens, tools, ok);
+          if (!ok) {
+            this.runErrors++;
+            this.react("sad");
+            if (this.pack.pack?.id) this.packErrors.add(this.pack.pack.id);
+          }
           this.activity(); // стая вернулась — проснулся встречать
           if (ok && this.bark(2500, false)) this.say(this.packBack(), 3500);
           this.speech.stbPick++;
@@ -155,16 +163,22 @@ export class BuddyApp {
       if (write) {
         // Не меняем baseline до подтверждённой записи: иначе повторная попытка теряет XP.
         const saved = this.ports.store.update((disk) =>
-          disk && !this.replaced ? mergeWithDisk(this.s, this.base, disk, this.dirty, now) : { ...this.s },
+          disk && !this.replaced ? mergeWithDisk(this.s, this.base, disk, this.dirty, now, this.runEnds) : { ...this.s },
         );
-        Object.assign(this.s, saved);
+        if (saved.born !== this.base.born) this.resetRunHistory();
+        this.s = saved;
         this.base = { ...saved };
         this.dirty.clear();
+        this.runEnds = [];
         this.replaced = false;
       } else if (!this.replaced) {
         const disk = this.ports.store.read();
         if (disk) {
-          Object.assign(this.s, mergeWithDisk(this.s, this.base, disk, this.dirty, now));
+          if (disk.born !== this.base.born) {
+            this.dirty.clear();
+            this.resetRunHistory();
+          }
+          this.s = mergeWithDisk(this.s, this.base, disk, this.dirty, now, this.runEnds);
           this.base = { ...disk };
         }
       }
@@ -343,6 +357,10 @@ export class BuddyApp {
     this.workStart = this.now();
     this.runErrors = 0;
     this.working = true;
+    if (this.tempMood === "sleep") {
+      this.tempMood = null;
+      this.tempUntil = 0;
+    }
     this.activity();
     this.render();
   }
@@ -370,7 +388,8 @@ export class BuddyApp {
     this.render();
   }
 
-  toolResult(name: string, input: any, ok: boolean) {
+  toolResult(name: string, input: any, ok: boolean, toolCallId?: string) {
+    const packAlreadyPenalized = toolCallId !== undefined && this.packErrors.delete(toolCallId);
     onToolCall(this.s);
     const c = classify(name, input, ok);
     if (ok) {
@@ -382,7 +401,8 @@ export class BuddyApp {
         this.say(c.t === "rm" && this.isDog() ? "ГАВ! (не трогай файлы)" : `${this.pick(this.barkSay())} ${this.speech.line(c.t)}`, 4000);
       } else if (c) this.speech.chat(c.t, c.p);
     } else {
-      onToolError(this.s);
+      if (packAlreadyPenalized) this.s.errors++;
+      else onToolError(this.s);
       this.runErrors++;
       this.errRow++;
       this.react("sad", 4000);
@@ -396,19 +416,26 @@ export class BuddyApp {
     this.poses.setAct(null, true);
     this.activity();
     this.tick();
-    onRunEnd(this.s, this.runErrors > 0);
+    const hadErrors = this.runErrors > 0;
+    onRunEnd(this.s, hadErrors);
+    this.runEnds.push(hadErrors);
     const s = this.s;
     if (level(s.xp) > this.levelAtStart) {
       const grewUp = spec(s).grown && level(s.xp) >= GROW_LEVEL && this.levelAtStart < GROW_LEVEL;
       this.say(grewUp ? `${s.name} вырос! теперь это ${labelFor(s)}` : `${this.speech.line("levelup")} lv.${level(s.xp)}`, 8000);
       this.react("love", 6000);
-    } else {
+    } else if (!hadErrors) {
       if (STREAKS.includes(s.cleanRuns!)) this.speech.shout("streak", 6000);
       else this.speech.chat("done", 0.6);
       this.react("happy", 4000);
     }
     this.sync();
     this.render();
+  }
+
+  resetRunHistory() {
+    this.runEnds = [];
+    this.runErrors = 0;
   }
 
   shutdown() {

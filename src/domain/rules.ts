@@ -17,7 +17,7 @@ export const GAIN = {
     tokFoodMax: 8,
     toolJoy: 1.5, // успешный tool call радует
     runJoy: 4, // завершённый запрос — ещё больше
-    errJoy: -4, // ошибка огорчает, но база вернёт
+    errJoy: -10, // ошибка огорчает, но база вернёт
     genEnergy: -1.5, // генерации утомляют
     toolEnergy: -0.4,
     genXp: 2,
@@ -119,7 +119,7 @@ export function relaxedGauges(st: BuddyState, now: number): Record<(typeof GAUGE
  * Слияние: disk — что сейчас в файле, base — каким файл был при нашей прошлой синхронизации,
  * mine — наше состояние в памяти, dirty — настройки, изменённые у нас.
  */
-export function mergeWithDisk(mine: BuddyState, base: BuddyState, disk: BuddyState, dirty: ReadonlySet<string>, now: number): BuddyState {
+export function mergeWithDisk(mine: BuddyState, base: BuddyState, disk: BuddyState, dirty: ReadonlySet<string>, now: number, runEnds: readonly boolean[] = []): BuddyState {
     // /buddy hatch в другом терминале — явная замена питомца, старый опыт ему не переносим.
     if (disk.born !== base.born) return {...disk};
     const m: any = {...disk};
@@ -131,7 +131,7 @@ export function mergeWithDisk(mine: BuddyState, base: BuddyState, disk: BuddySta
     const bg = relaxedGauges(base, now);
     for (const k of GAUGES) m[k] = clamp(dg[k] + (mine[k] - bg[k]));
     for (const k of CONFIG) if (dirty.has(k)) m[k] = (mine as any)[k];
-    m.cleanRuns = (mine.cleanRuns ?? 0) !== (base.cleanRuns ?? 0) ? mine.cleanRuns : disk.cleanRuns;
+    m.cleanRuns = runEnds.reduce((streak, hadErrors) => hadErrors ? 0 : streak + 1, disk.cleanRuns ?? 0);
     m.lastTick = now;
     m.lastActivity = Math.max(disk.lastActivity ?? 0, mine.lastActivity ?? 0);
     return m;
@@ -165,16 +165,16 @@ export function onToolError(s: BuddyState): void {
 }
 
 /** Стая субагентов вернулась: их ходы и вызовы идут в опыт питомца */
-export function onPackReturn(s: BuddyState, gens: number, tools: number): void {
+export function onPackReturn(s: BuddyState, gens: number, tools: number, ok = true): void {
     s.generations = (s.generations ?? 0) + gens;
     s.toolCalls += tools;
     s.xp += gens * GAIN.genXp + tools * GAIN.toolXp;
-    s.joy = clamp(s.joy + GAIN.runJoy);
+    s.joy = clamp(s.joy + (ok ? GAIN.runJoy : GAIN.errJoy));
 }
 
 /** Запрос завершён: радость и серия запросов без ошибок */
 export function onRunEnd(s: BuddyState, hadErrors: boolean): void {
-    s.joy = clamp(s.joy + GAIN.runJoy);
+    if (!hadErrors) s.joy = clamp(s.joy + GAIN.runJoy);
     s.cleanRuns = hadErrors ? 0 : (s.cleanRuns ?? 0) + 1;
 }
 

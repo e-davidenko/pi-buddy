@@ -9,12 +9,12 @@ import { type ModelPort, learn } from "./learn.ts";
 import { cleanPhraseFile, ensurePhraseTemplate } from "./phrases.ts";
 import type { Ui } from "./ports.ts";
 
-export const COMMANDS = ["feed", "pet", "play", "nap", "choose", "side", "top", "mute", "unmute", "anim", "pxcolor", "bark", "learn", "phrases", "dock", "compact", "big", "name", "stats", "hatch"];
-export const COMMAND_HELP = "Тамагочи: /buddy [feed|pet|play|nap|choose|side|top|dock|compact|big|mute|unmute|anim|phrases|name <имя>|stats|hatch]";
+export const COMMANDS = ["feed", "pet", "play", "nap", "choose", "side", "top", "mute", "unmute", "anim", "pxcolor", "bark", "learn", "phrases", "dock", "compact", "big", "name", "stats", "version", "hatch"];
+export const COMMAND_HELP = "Тамагочи: /buddy [feed|pet|play|nap|choose|side|top|dock|compact|big|mute|unmute|anim|phrases|name <имя>|stats|version|hatch]";
 
 /** Подсказки при наборе /buddy … */
 export function completions(prefix: string) {
-  const parts = prefix.split(/\s+/);
+  const parts = prefix.trimStart().toLowerCase().split(/\s+/);
   if (parts[0] === "choose" && parts.length > 1)
     return SPECIES_KEYS.filter((k) => k.startsWith(parts[1])).map((k) => ({
       value: `choose ${k}`,
@@ -25,6 +25,15 @@ export function completions(prefix: string) {
 }
 
 export async function runCommand(app: BuddyApp, args: string, ui: Ui, model: ModelPort) {
+  const commandParts = (args ?? "").trim().split(/\s+/);
+  if (commandParts[0].toLowerCase() === "hatch") {
+    const explicit = commandParts.length === 2 && commandParts[1].toLowerCase() === "confirm";
+    const ok = explicit || (ui.confirm ? await ui.confirm("Новое яйцо", `${app.s.name} уйдёт навсегда. Точно?`) : false);
+    if (!ok) {
+      if (!ui.confirm) ui.notify("Для сброса питомца и опыта введи /buddy hatch confirm", "warning");
+      return;
+    }
+  }
   app.ports.scheduler.startTimer();
   app.sync(false); // сначала подтянуть прогресс из других терминалов
   app.activity();
@@ -61,7 +70,6 @@ export async function runCommand(app: BuddyApp, args: string, ui: Ui, model: Mod
         s().joy = clamp(s().joy + 25);
         s().energy = clamp(s().energy - 15);
         s().food = clamp(s().food - 5);
-        s().xp += 2;
         app.react("happy");
         sp.shout("play", 4000, true);
       }
@@ -74,13 +82,27 @@ export async function runCommand(app: BuddyApp, args: string, ui: Ui, model: Mod
     case "choose": {
       let key = rest[0]?.toLowerCase();
       if (!key) {
-        const opts = SPECIES_KEYS.map((k) => `${SPECIES[k].label} (${SPECIES[k].rarity})${k === s().species ? "  <- сейчас" : ""}`);
-        const picked = await ui.select?.("Выбери питомца", opts);
+        // Список виден даже в клиентах, где select отсутствует, не рисуется или возвращает undefined.
+        ui.notify(
+          "Выбери питомца в меню или введи полную команду в одной строке:\n" +
+          SPECIES_KEYS.map((k) => `/buddy choose ${k} — ${SPECIES[k].label}`).join("\n") +
+          "\nЕсли меню не видно, нажми Esc и введи команду. Уровень и опыт сохранятся.",
+          "info",
+        );
+        if (!ui.select) break;
+        const opts = SPECIES_KEYS.map((k) => `${k} — ${SPECIES[k].label} (${SPECIES[k].rarity})${k === s().species ? "  <- сейчас" : ""}`);
+        let picked: string | undefined;
+        try {
+          picked = await ui.select("Выбери питомца", opts);
+        } catch (e) {
+          ui.notify(`Меню выбора недоступно: ${e instanceof Error ? e.message : String(e)}. Используй /buddy choose veo_px для ВЕО или /buddy choose gsd для овчарки.`, "warning");
+          break;
+        }
         if (picked === undefined) break;
         key = SPECIES_KEYS[opts.indexOf(picked)];
       }
-      if (!SPECIES[key]) {
-        ui.notify(`Нет такого вида. Есть: ${SPECIES_KEYS.join(", ")}`, "warning");
+      if (!SPECIES_KEYS.includes(key)) {
+        ui.notify(`Нет такого вида. Введи, например, /buddy choose veo_px (ВЕО) или /buddy choose gsd (овчарка). Есть: ${SPECIES_KEYS.join(", ")}`, "warning");
         break;
       }
       // меняем облик, прогресс (имя, xp, статы) сохраняется
@@ -90,6 +112,9 @@ export async function runCommand(app: BuddyApp, args: string, ui: Ui, model: Mod
       sp.shout("hello", 5000, true);
       break;
     }
+    case "version":
+      ui.notify(`pi-buddy ${app.ports.env.version ?? "версия неизвестна"}`, "info");
+      break;
     case "mute":
       s().muted = true;
       app.say("молчу, но всё вижу", 3000);
@@ -173,19 +198,22 @@ export async function runCommand(app: BuddyApp, args: string, ui: Ui, model: Mod
       break;
     }
     case "hatch": {
-      const ok = ui.confirm ? await ui.confirm("Новое яйцо", `${s().name} уйдёт навсегда. Точно?`) : true;
-      if (ok) {
-        app.s = hatch(`${app.ports.env.user()}-${app.now()}-${app.ports.clock.rng()}`, app.now(), SPECIES, RARITY_WEIGHTS, NAMES);
-        app.replaced = true; // новый питомец заменяет общий целиком
-        app.say(`вылупился! я ${labelFor(app.s)}`, 6000);
-        app.react("happy");
+      const previous = s();
+      app.s = hatch(`${app.ports.env.user()}-${app.now()}-${app.ports.clock.rng()}`, app.now(), SPECIES, RARITY_WEIGHTS, NAMES);
+      for (const key of ["placement", "size", "muted", "anim", "pxColor", "visible"] as const) {
+        (app.s as any)[key] = previous[key];
       }
+      app.s.born = Math.max(app.now(), previous.born + 1);
+      app.resetRunHistory();
+      app.replaced = true; // новый питомец заменяет общий целиком
+      app.say(`вылупился! я ${labelFor(app.s)}`, 6000);
+      app.react("happy");
       break;
     }
     default:
-      ui.notify("Не понял. /buddy feed | pet | play | nap | choose [вид] | side | top | dock | compact | big | mute | unmute | anim on/off/auto | phrases | name <имя> | stats | hatch", "warning");
+      ui.notify("Не понял. /buddy feed | pet | play | nap | choose [вид] | side | top | dock | compact | big | mute | unmute | anim on/off/auto | phrases | name <имя> | stats | version | hatch", "warning");
   }
-  s().visible = cmd === "" ? s().visible : true;
+  s().visible = cmd === "" || cmd?.toLowerCase() === "hatch" ? s().visible : true;
   for (const k of CONFIG) if ((s() as any)[k] !== (cfgBefore as any)[k]) app.dirty.add(k);
   app.sync();
   app.render();

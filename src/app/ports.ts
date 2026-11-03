@@ -29,6 +29,7 @@ export interface Clock {
 
 /** Окружение процесса */
 export interface Env {
+  version?: string;
   user(): string;
   host(): string;
   argv: string[];

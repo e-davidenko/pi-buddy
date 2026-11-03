@@ -18,7 +18,7 @@ export function moodOf(i: MoodInput): Mood {
   if (i.tempMood && i.now < i.tempUntil) return i.tempMood;
   if (i.working) return "work";
   // пока стая в деле — на посту, от скуки не засыпает (только если совсем без сил)
-  if (i.energy < 10 || (!i.herding() && i.now - i.lastActivity > i.idleSleepMs)) return "sleep";
+  if (i.energy < 10 || (!i.herding() && i.now - i.lastActivity >= i.idleSleepMs)) return "sleep";
   if (i.joy < 30) return "sad";
   if (i.joy > 80 && i.food > 60) return "happy";
   return "idle";
@@ -32,5 +32,5 @@ export function restingState(m: Mood, lastActivity: number, now: number): PxStat
   if (m === "sleep") return "sleep";
   if (m === "sad") return "sad";
   if (m === "work" || m === "happy" || m === "love" || m === "eat") return m;
-  return now - lastActivity > REST_AFTER_MS ? "rest" : "idle"; // заскучал — прилёг
+  return now - lastActivity >= REST_AFTER_MS ? "rest" : "idle"; // заскучал — прилёг
 }
