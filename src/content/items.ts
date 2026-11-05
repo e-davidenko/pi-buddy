@@ -24,3 +24,8 @@ export const IT: Record<string, PxItem> = {
   coin: { name: "монетка", mode: "toss", art: [".Y.", "YyY", ".Y."], say: ["подкидывает монетку", "орёл или решка?"] },
   gold: { name: "сокровище", mode: "chew", art: ["..Y...", ".YyY..", "YyYyYy"], say: ["лежит на сокровищах", "пересчитывает золото", "моё золото!"] },
 };
+
+for (const [id, item] of Object.entries(IT)) {
+  item.id = id;
+  item.aliases = [id];
+}

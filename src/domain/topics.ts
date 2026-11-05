@@ -25,16 +25,17 @@ export const TOPIC_POSES: Record<Topic, Pose[]> = {
   stbThink: ["stand"], stbSniff: ["walk"], stbDig: ["stand"], stbAlert: ["stand"], stbSit: ["sit"],
   stbWait: ["stand", "walk", "sit", "lie"], thinkLong: ["stand", "walk", "sit", "lie"],
 };
-export const POSE_RU: Record<Pose, string> = { stand: "стоит", walk: "идёт", lie: "лежит", sit: "сидит" };
-export const poseNote = (t: Topic) => TOPIC_POSES[t].map((p) => `${POSE_RU[p]} (@${p}:)`).join(" или ");
-
 /** Фраза осмысленна для темы: длина в норме и метка позы (если есть) возможна */
-export function phraseProblem(t: Topic, x: string): string | null {
+export type PhraseProblem = { code: "empty" } | { code: "long" } | { code: "pose"; allowed: Pose[]; pose: string };
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+export const phraseLength = (text: string) => Array.from(graphemes.segment(text)).length;
+
+export function phraseProblem(t: Topic, x: string): PhraseProblem | null {
   const tag = /^@(\w+):/.exec(x)?.[1];
   const body = x.replace(/^@\w+:/, "").trim();
-  if (body.length < 2) return "пустая";
-  if (body.length > MAX_LEN) return "длинная";
-  if (tag && !TOPIC_POSES[t].includes(tag as Pose)) return `пёс тут ${TOPIC_POSES[t].map((p) => POSE_RU[p]).join("/")}, а не ${POSE_RU[tag as Pose] ?? tag}`;
+  if (phraseLength(body) < 2) return { code: "empty" };
+  if (phraseLength(body) > MAX_LEN) return { code: "long" };
+  if (tag && !TOPIC_POSES[t].includes(tag as Pose)) return { code: "pose", allowed: TOPIC_POSES[t], pose: tag };
   return null;
 }
 export const MAX_LEN = 34;
@@ -42,7 +43,8 @@ export const MAX_LEN = 34;
 /** Чистим и проверяем фразы от модели/агента; дубликаты (с existing и между собой) отсекаем */
 export function cleanPhrases(t: Topic, list: unknown, existing: string[]): string[] {
   if (!Array.isArray(list)) return [];
-  const seen = new Set(existing.map((x) => x.toLowerCase()));
+  const normalize = (x: string) => x.replace(/^@\w+:/, "").trim().normalize("NFC").toLowerCase();
+  const seen = new Set(existing.map(normalize));
   const out: string[] = [];
   for (const raw of list) {
     if (typeof raw !== "string") continue;
@@ -51,8 +53,8 @@ export function cleanPhrases(t: Topic, list: unknown, existing: string[]): strin
     const body = x.slice(tag.length).trim();
     x = tag + body;
     if (phraseProblem(t, x)) continue; // длинная или поза, в которой пёс тут не бывает
-    if (seen.has(body.toLowerCase())) continue;
-    seen.add(body.toLowerCase());
+    if (seen.has(normalize(body))) continue;
+    seen.add(normalize(body));
     out.push(x);
   }
   return out;

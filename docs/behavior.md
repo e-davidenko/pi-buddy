@@ -1,70 +1,57 @@
-# Правила поведения питомца
+# Pet behavior
 
-Согласованы 3 ноября 2026 года. Эти правила закреплены тестами домена и приложения.
+[Русский](behavior.ru.md) · English
 
-## Уход
+These rules are covered by domain and application tests.
 
-Все шкалы ограничены диапазоном 0–100. Время плавно возвращает еду и радость к 60,
-энергию к 100. Постоянные времени — 3, 2 и 1 час соответственно. Частота тиков
-не влияет на результат; время в прошлом состояние не меняет.
+## Care
 
-| Команда | Эффект |
-| --- | --- |
-| feed | Еда +30, энергия +5; при еде выше 95 отказ |
-| pet | Радость +15 |
-| play | Радость +25, энергия −15, еда −5; при энергии ниже 15 отказ |
-| nap | Энергия +40 сразу, временная реакция сна на 8 секунд |
+All meters are clamped to 0–100. Time gradually returns food and joy to 60 and energy to 100, with time constants of 3, 2 and 1 hours respectively. Tick frequency does not affect the result; time moving backward does not change the state.
 
-Уход можно повторять без задержки. Ручная игра XP не приносит.
-Начало работы агента прерывает временный сон, сохраняя восстановленную энергию.
+| Command | Effect |
+|---|---|
+| feed | Food +30, energy +5; refused when food is above 95 |
+| pet | Joy +15 |
+| play | Joy +25, energy −15, food −5; refused below 15 energy |
+| nap | Energy +40 immediately; temporary sleep reaction for 8 seconds |
 
-## Работа агента
+Care has no cooldown and gives no XP. Starting agent work interrupts temporary sleep and keeps the restored energy.
 
-- Генерация: XP +2 и +1 за каждую полную тысячу выходных токенов;
-  еда +5 и ещё min(8, токены / 400); энергия −1,5.
-- Инструмент: счётчик +1, XP +1 и энергия −0,4 независимо от исхода.
-- Успех инструмента: радость +1,5. Ошибка: счётчик ошибок +1, радость −10.
-- Завершение запроса без ошибок: радость +4 и увеличение серии успехов.
-  При ошибках серия сбрасывается, дополнительного бонуса или штрафа нет.
-- Возвращение стаи: XP +2 за генерацию и +1 за инструмент при любом исходе.
-  Успешное возвращение даёт +4 радости, неуспешное −10 один раз за всю стаю.
-  Ошибки отдельных субагентов и ошибка оболочки запуска повторно не штрафуются.
-  Неудача любого фонового запуска делает возвращение всей стаи неуспешным.
-- Прогресс субагентов записывает родительская сессия; дочерние процессы без UI
-  общий файл не меняют.
+## Agent work
 
-## Настроение
+- Generation: XP +2 and +1 per full thousand output tokens; food +5 plus min(8, tokens / 400); energy −1.5.
+- Tool call: counter +1, XP +1, energy −0.4 regardless of outcome.
+- Successful tool: joy +1.5. Failed tool: errors +1, joy −10.
+- Successful request completion: joy +4 and success streak +1. Errors reset the streak without another bonus or penalty.
+- Pack return: XP +2 per generation and +1 per tool regardless of outcome. A successful return gives +4 joy; a failed return costs 10 joy once for the entire pack. Individual subagent and launcher errors are not penalized again. Any failed background run makes the entire pack return unsuccessful.
+- The parent session saves subagent progress; headless children do not modify shared state.
 
-Позы активности при быстрых вызовах инструментов показываются по очереди, каждая не меньше 5 секунд.
+## Mood
 
-Приоритет: временная реакция → работа → сон → грусть → радость → покой.
-Временные реакции действуют и во время работы; начало работы снимает только сон.
+Rapid tool calls queue activity poses; each is displayed for at least five seconds.
 
-- Энергия ниже 10 — сон; радость ниже 30 — грусть.
-- Радость выше 80 и еда выше 60 — счастлив.
-- Через 3 минуты бездействия ложится, через 10 минут засыпает, ровно при достижении срока.
-  Порог сна можно настроить через PI_BUDDY_IDLE_SLEEP_MS.
-- Пока стая работает, от бездействия не засыпает, но может заснуть от истощения.
-- Временная реакция заканчивается ровно в указанный срок.
+Priority: temporary reaction → work → sleep → sadness → happiness → idle. Temporary reactions also apply while working; starting work clears only temporary sleep.
 
-## Выбор и новое яйцо
+- Energy below 10 causes sleep; joy below 30 causes sadness.
+- Joy above 80 and food above 60 cause happiness.
+- After 3 idle minutes the pet lies down; after 10 it sleeps, exactly at the threshold. Configure the sleep threshold with `PI_BUDDY_IDLE_SLEEP_MS`.
+- An active pack prevents idle sleep, but exhaustion can still put the pet to sleep.
+- Temporary reactions expire exactly at their deadline.
 
-choose меняет вид и редкость вида, сохраняя имя, XP, возраст, шкалы, счётчики и shiny.
-Взрослый облик, если есть у вида, включается с уровня 5 включительно.
+## Choosing and hatching
 
-hatch создаёт нового питомца с новым именем, редкостью и shiny; XP и счётчики
-обнуляются, еда и радость — 80, энергия — 100. Настройки видимости, расположения,
-размера, анимации, mute и цвета сохраняются. Требуется подтверждение;
-без диалога используется явная команда /buddy hatch confirm. Отмена ничего не меняет.
+`choose` changes species and its rarity, preserving name, XP, age, meters, counters and shiny status. Adult artwork, where available, starts at level 5.
 
-## Несколько терминалов
+`hatch` creates a new name, rarity and shiny status, resets XP and counters, and starts food and joy at 80 and energy at 100. Visibility, placement, size, animation, mute, pixel color and language are preserved. Confirmation is required; without a dialog, enter `/buddy hatch confirm`. Canceling changes nothing.
 
-XP и счётчики складываются без повторного начисления, шкалы объединяются
-приращениями с учётом прошедшего времени. Последняя активность — самая свежая.
-Терминал записывает только изменённые им настройки; при конфликте одной настройки
-побеждает последняя успешная запись.
+## Multiple terminals
 
-Серия успехов общая: результаты запросов применяются в порядке успешного сохранения.
-Ошибка записи оставляет результаты в памяти для повторной попытки; чтение их не подтверждает.
-Новое яйцо заменяет питомца во всех терминалах и отбрасывает несохранённый прогресс
-и настройки прежнего питомца.
+XP and counters merge without double counting. Meters merge as deltas with elapsed time accounted for. The latest activity timestamp wins. Each terminal writes only the settings it changed; concurrent edits of the same setting use the last successful write.
+
+The success streak is shared: request outcomes are applied in successful save order. Failed writes leave outcomes in memory for retry; reads do not acknowledge them. A new egg replaces the pet across all terminals and discards unsaved progress and settings belonging to the old pet.
+
+## Language and phrases
+
+The shared `language` setting is `ru`, `en` or `auto`. Existing states without it keep `ru`; new pets start with `auto`. Auto resolves independently from each terminal's locale. Changing language preserves pet progress and clears transient speech and toy scenes.
+
+Custom phrases are stored per language and species. Legacy custom files belong to Russian. Learning captures language and species before calling the model; a later language or species change does not redirect the result to a different set. Phrase writes use an exclusive lock and atomic file replacement; a busy writer reports an error so the command can be retried.

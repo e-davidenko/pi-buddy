@@ -15,6 +15,8 @@ export interface PhraseStore {
   read(): any;
   write(file: any): void;
   exists(): boolean;
+  /** Atomic read-modify-write, used by file storage to protect concurrent sessions. */
+  update?(change: (file: unknown) => unknown): unknown;
 }
 
 /** status.json фонового запуска pi-subagents */
@@ -29,6 +31,7 @@ export interface Clock {
 
 /** Окружение процесса */
 export interface Env {
+  locale?: string;
   version?: string;
   user(): string;
   host(): string;

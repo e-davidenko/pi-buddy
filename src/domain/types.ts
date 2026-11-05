@@ -3,7 +3,11 @@
 export type Mood = "idle" | "happy" | "sad" | "sleep" | "work" | "eat" | "love";
 export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 
+export type Locale = "ru" | "en";
+export type Language = Locale | "auto";
+
 export interface BuddyState {
+  language?: Language;
   name: string;
   species: string;
   rarity: Rarity;
@@ -79,6 +83,8 @@ export type PxState = "work" | "happy" | "love" | "eat" | "idle" | "rest" | "sad
  * Рисуются поверх кадра у земли рядом с питомцем; say — дежурные фразы, пока идёт игра.
  */
 export interface PxItem {
+  id?: string;
+  aliases?: string[];
   name: string;
   mode: "toss" | "chew";
   art: string[];

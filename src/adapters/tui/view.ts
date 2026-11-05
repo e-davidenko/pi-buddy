@@ -19,13 +19,13 @@ import { level } from "../../domain/rules.ts";
 import type { Mood, PxFrame, PxItem } from "../../domain/types.ts";
 import { importPi } from "../pi/importPi.ts";
 import { miniSprite, pxRender } from "./pixels.ts";
-import { ANSI, wrapWords } from "./text.ts";
+import { textWidth, truncateText, wrapWords } from "./text.ts";
 
 const WIDGET_ID = "buddy";
 
 export class TuiView implements View {
   tuiRef: any = null;
-  private vw: (t: string) => number = (t) => t.replace(ANSI, "").length;
+  private vw: (t: string) => number = textWidth;
   private truncW: ((t: string, w: number, ellipsis?: string) => string) | null = null;
   private overlay: any = null;
   private footerRows = -1;
@@ -40,6 +40,11 @@ export class TuiView implements View {
   }
 
   /** Приглушённый цвет из темы pi; если не вышло — просто dim */
+  private pad(t: string, width: number) {
+    const text = truncateText(t, width, this.vw);
+    return text + " ".repeat(Math.max(0, width - this.vw(text)));
+  }
+
   private dim(t: string): string {
     try {
       const out = this.a.ui?.theme?.fg?.("muted", t);
@@ -96,8 +101,8 @@ export class TuiView implements View {
     const pups = pack!.pups.slice(0, 3);
     const mark = (p: Pup) => (p.status === "done" ? "✓" : p.status === "err" ? "✗" : p.status === "wait" ? "·" : "…");
     if (!a.pxOn()) {
-      const t = "стая: " + pack!.pups.map((p) => p.name + mark(p)).join(" ");
-      return [t.length > cw ? t.slice(0, cw - 1) + "…" : t];
+      const t = a.t("packLabel") + pack!.pups.map((p) => p.name + mark(p)).join(" ");
+      return [truncateText(t, cw, this.vw)];
     }
     const grid = Array.from({ length: 6 }, () => ".".repeat(PX_W).split(""));
     const x0 = Math.floor((PX_W - pups.length * 8) / 2);
@@ -105,9 +110,9 @@ export class TuiView implements View {
       miniSprite(this.pupFrame(p)).forEach((row, y) => [...row].forEach((c, x) => { if (c !== ".") grid[y][x0 + i * 8 + x] = c; }));
     });
     const art = pxRender(grid.map((r) => r.join("")), false, a.pxMode());
-    const label = " ".repeat(x0) + pups.map((p) => (p.name.slice(0, 6) + mark(p)).padEnd(8).slice(0, 8)).join("");
+    const label = " ".repeat(x0) + pups.map((p) => this.pad(truncateText(p.name, 6, this.vw) + mark(p), 8)).join("");
     const more = pack!.pups.length > 3 ? ` +${pack!.pups.length - 3}` : "";
-    return [...art, this.dim((label + more).slice(0, cw))];
+    return [...art, this.dim(truncateText(label + more, cw, this.vw))];
   }
 
   // ---------- колонки рядом с полем ввода ----------
@@ -120,15 +125,15 @@ export class TuiView implements View {
     const col: string[] = [];
     // зона реплики всегда 2 строки: живая реплика или дежурная серым — высота не прыгает
     const cw = Math.max(SIDE_W, a.dockW() - 1);
-    const talk = a.bubbleOn() ? wrapWords(a.bubble, cw - 2, 2) : wrapWords(a.standby(), cw - 2, 2).map((t) => this.dim(t));
+    const talk = a.bubbleOn() ? wrapWords(a.bubble, cw - 2, 2, this.vw) : wrapWords(a.standby(), cw - 2, 2, this.vw).map((t) => this.dim(t));
     while (talk.length < 2) talk.unshift("");
     col.push(...talk.map((l) => (l ? " " + l : "")));
     col.push(...this.packLines(cw)); // субагенты, если работают
     col.push(...lines);
     const nm = `${s.shiny ? "~" : ""}${s.name}${s.shiny ? "~" : ""} lv.${level(s.xp)}${decoFor(m, a.quiet(), a.animN)}`;
-    col.push(nm.length > cw ? nm.slice(0, cw - 1) + "…" : nm);
+    col.push(truncateText(nm, cw, this.vw));
     const p = (v: number) => String(Math.round(v)).padStart(3);
-    col.push(`ед${p(s.food)} рд${p(s.joy)} сл${p(s.energy)}`);
+    col.push(`${a.t("foodShort")}${p(s.food)} ${a.t("joyShort")}${p(s.joy)} ${a.t("energyShort")}${p(s.energy)}`);
     return col;
   }
 
@@ -164,18 +169,18 @@ export class TuiView implements View {
     const live = a.bubbleOn();
     let talk = live ? a.bubble : a.standby();
     const room = leftW - 12; // слева на рамке оставляем место под служебные пометки pi
-    if (talk.length + 2 > room) talk = talk.slice(0, Math.max(0, room - 3)) + "…";
+    talk = truncateText(talk, Math.max(0, room - 2), this.vw);
     if (talk && this.truncW) {
       const head = this.truncW(rows[0], leftW - vw(talk) - 2, "");
       rows[0] = head + " ".repeat(Math.max(0, leftW - vw(talk) - 2 - vw(head))) + " " + (live ? talk : this.dim(talk)) + " ";
     }
-    const cut = (t: string) => (t.length > MINI_W ? t.slice(0, MINI_W - 1) + "…" : t);
+    const cut = (t: string) => truncateText(t, MINI_W, this.vw);
     const face = miniFor(s).replace(/E/g, eye);
     const n = (v: number) => String(Math.round(v)).padStart(3);
     const cells = [
       cut(`${face}${decoFor(m, a.quiet(), a.animN)}`),
       cut(`${s.name} lv.${level(s.xp)}`),
-      this.dim(cut(`ед${n(s.food)} рд${n(s.joy)} сл${n(s.energy)}`)),
+      this.dim(cut(`${a.t("foodShort")}${n(s.food)} ${a.t("joyShort")}${n(s.joy)} ${a.t("energyShort")}${n(s.energy)}`)),
     ];
     // без truncateToWidth реплику кладём в колонку вместо мордочки
     if (talk && !this.truncW) cells[0] = live ? cut(talk) : this.dim(cut(talk));
@@ -221,17 +226,17 @@ export class TuiView implements View {
     this.tuiRef?.requestRender?.();
 
     const { m, lines } = this.eyesNow();
-    const w = Math.max(...lines.map((l) => l.length)) + 2;
+    const w = Math.max(...lines.map((l) => this.vw(l))) + 2;
     const info = [
-      `${s.shiny ? "~" : ""}${s.name}${s.shiny ? "~" : ""} (${labelFor(s)})  lv.${level(s.xp)}  ${RARITY_STARS[s.rarity]}${decoFor(m, a.quiet(), a.animN)}`,
-      `еда ${bar(s.food)}  радость ${bar(s.joy)}`,
-      `сил ${bar(s.energy)}  xp ${s.xp}`,
+      `${s.shiny ? "~" : ""}${s.name}${s.shiny ? "~" : ""} (${labelFor(s, a.locale())})  lv.${level(s.xp)}  ${RARITY_STARS[s.rarity]}${decoFor(m, a.quiet(), a.animN)}`,
+      `${a.t("food")} ${bar(s.food)}  ${a.t("joy")} ${bar(s.joy)}`,
+      `${a.t("energy")} ${bar(s.energy)}  xp ${s.xp}`,
     ];
     const rows = Math.max(lines.length, info.length);
     const out: string[] = [];
     out.push(" ".repeat(Math.max(0, w - 4)) + (a.bubbleOn() ? `( ${a.bubble} )` : this.dim(`  ${a.standby()}`)));
-    for (let i = 0; i < rows; i++) out.push((lines[i] ?? "").padEnd(w) + (info[i] ?? ""));
-    ui.setWidget(WIDGET_ID, out);
+    for (let i = 0; i < rows; i++) out.push(this.pad(lines[i] ?? "", w) + (info[i] ?? ""));
+    ui.setWidget(WIDGET_ID, out.map((line) => this.truncW ? this.truncW(line, a.display.termW || 80) : truncateText(line, a.display.termW || 80, this.vw)));
   }
 
   // ---------- режим dock: полоса справа через оверлей ----------

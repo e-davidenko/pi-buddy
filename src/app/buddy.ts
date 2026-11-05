@@ -2,8 +2,8 @@
  * Приложение: питомец текущего терминала. Держит состояние, синхронизирует его с общим файлом
  * и реагирует на события агента (сценарии). Экран, файлы, часы — через порты.
  */
-import { DEFAULT_BARK, SAY } from "../content/phrases.ts";
-import { NAMES, RARITY_WEIGHTS, SPECIES } from "../content/species.ts";
+import { DEFAULT_BARK } from "../content/phrases.ts";
+import { RARITY_WEIGHTS, SPECIES } from "../content/species.ts";
 import { PX_ANIM } from "../domain/animation.ts";
 import { moodOf, restingState } from "../domain/mood.ts";
 import { PackTracker } from "../domain/pack.ts";
@@ -19,6 +19,10 @@ import { framesFor, labelFor, spec } from "./catalog.ts";
 import type { Clock, Env, PetStore, PhraseStore, RunStatusReader, Scheduler, Ui, View } from "./ports.ts";
 import { DOCK_W, PX_MIN_TERM, PX_W } from "./layout.ts";
 import { decoFor, frameIndex } from "./viewModel.ts";
+import { errorText } from "./errors.ts";
+import { commonFor, dogSpecies, message, namesFor, resolveLocale, speciesFor } from "./localization.ts";
+import type { MessageArgs, MessageKey } from "../content/locales/ui.ts";
+import { phraseSet, phraseFile } from "./phraseFile.ts";
 
 /** Через сколько тиков (по 500 мс) что делать в фоне */
 const TICK_MS = 500;
@@ -70,6 +74,7 @@ export class BuddyApp {
   private errRow = 0;
   private lastPackSig = "";
   private syncError = "";
+  private phraseLoadError: unknown = null;
 
   readonly speech: Speech;
   readonly poses: PoseMachine;
@@ -80,27 +85,33 @@ export class BuddyApp {
     const argv = env.argv;
     this.headless = argv.includes("-p") || argv.includes("--print") || /^(json|rpc)$/.test(argv[argv.indexOf("--mode") + 1] ?? "");
     // первый запуск: питомец детерминирован по пользователю, как в Claude Code
-    this.s = ports.store.read() ?? hatch(env.user() + "@" + env.host(), this.now(), SPECIES, RARITY_WEIGHTS, NAMES);
+    const saved = ports.store.read();
+    this.s = saved ?? { ...hatch(env.user() + "@" + env.host(), this.now(), SPECIES, RARITY_WEIGHTS, namesFor(resolveLocale("auto", env.locale))), language: "auto" };
+    this.s.language ??= "ru";
     this.base = { ...this.s };
 
     const speechCustom = (() => {
       try {
-        return ports.phrases.read() ?? {};
-      } catch {
-        return {}; // своих фраз нет — ок
+        return phraseFile(ports.phrases.read() ?? {});
+      } catch (e) {
+        if (ports.phrases.exists()) this.phraseLoadError = e;
+        return {}; // runtime can continue; writes still validate the original file
       }
     })();
     this.speech = new Speech({
       now: () => this.now(),
       rng: () => ports.clock.rng(),
       species: () => this.s.species,
-      speciesSay: () => spec(this.s).say,
-      common: () => SAY,
+      speciesSay: () => this.spec().say,
+      common: () => commonFor(this.locale()),
+      locale: () => this.locale(),
+      custom: () => phraseSet(this.speech.custom, this.locale()),
       pose: () => this.pose(),
       muted: () => !!this.s.muted,
       say: (t, ms) => this.say(t, ms),
     });
     this.speech.custom = speechCustom;
+    this.speechLocale = this.locale();
 
     this.poses = new PoseMachine({
       now: () => this.now(),
@@ -135,6 +146,36 @@ export class BuddyApp {
         },
       },
     );
+  }
+
+  phrasePool(topic: Topic, locale = this.locale(), species = this.s.species) {
+    const speech = new Speech({
+      now: () => this.now(), rng: () => this.ports.clock.rng(), species: () => species,
+      speciesSay: () => speciesFor(species, locale).say, common: () => commonFor(locale),
+      pose: () => null, muted: () => false, say() {},
+    });
+    speech.setCustom(phraseSet(this.speech.custom, locale));
+    return speech.pool(topic);
+  }
+
+  locale() {
+    return resolveLocale(this.s.language, this.ports.env.locale);
+  }
+  t<K extends MessageKey>(key: K, ...args: MessageArgs<K>) {
+    return message(this.locale(), key, ...args);
+  }
+  spec() {
+    return speciesFor(this.s.species, this.locale());
+  }
+  private speechLocale = "";
+  refreshLanguage() {
+    const locale = this.locale();
+    if (this.speechLocale === locale) return;
+    this.speechLocale = locale;
+    this.bubble = "";
+    this.bubbleUntil = 0;
+    this.scene = null;
+    this.speech.reset();
   }
 
   now() {
@@ -182,11 +223,12 @@ export class BuddyApp {
           this.base = { ...disk };
         }
       }
+      this.refreshLanguage();
       this.syncError = "";
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = errorText(e, this.locale());
       if (message !== this.syncError) {
-        this.ui?.notify(`Не удалось сохранить/прочитать прогресс питомца: ${message}. Повторю сохранение автоматически.`, "warning");
+        this.ui?.notify(this.t("saveError", { error: message }), "warning");
       }
       this.syncError = message;
     }
@@ -224,6 +266,7 @@ export class BuddyApp {
     return !this.working && this.display.mode() !== "fullscreen";
   }
   render() {
+    this.refreshLanguage();
     this.view.render();
   }
 
@@ -268,18 +311,18 @@ export class BuddyApp {
   }
 
   isDog() {
-    return !!spec(this.s).say?.done?.some((x) => /гав/i.test(x)) || this.s.species === "gsd";
+    return dogSpecies(this.s.species);
   }
   barkSay(): string[] {
-    const sp = spec(this.s);
+    const sp = this.spec();
     return sp.voice?.length ? sp.voice : this.s.species === "gsd" ? ["wuff!", "wuff-wuff!", "WUFF!"] : DEFAULT_BARK;
   }
   /** Подписи стаи: у собак — «стая», у остальных — свои помощники */
   packGo(n: number) {
-    return this.isDog() ? (n > 1 ? `стая, вперёд! (${n})` : "апорт, помощник!") : n > 1 ? `помощники, вперёд! (${n})` : "помощник, вперёд!";
+    return n > 1 ? this.t(this.isDog() ? "packGoDog" : "packGo", { count: n }) : this.t(this.isDog() ? "packGoOneDog" : "packGoOne");
   }
   packBack() {
-    return this.isDog() ? "гав! стая вернулась" : `${this.pick(this.barkSay())} ${this.pick(spec(this.s).packSay?.home ?? ["все вернулись"])}`;
+    return this.isDog() ? this.t("packBackDog") : `${this.pick(this.barkSay())} ${this.pick(this.spec().packSay?.home ?? [this.t("packBack")])}`;
   }
   /** Голос (гав/мяу/кря…): поза BK на ms; talk — ещё и реплика */
   bark(ms = 3000, talk = true) {
@@ -294,7 +337,7 @@ export class BuddyApp {
     return !!this.scene && this.now() < this.scene.until && this.pxOn() && !this.working;
   }
   startScene(item?: PxItem, ms = 12_000) {
-    const items = spec(this.s).items;
+    const items = this.spec().items;
     const it = item ?? (items?.length ? items[Math.floor(this.ports.clock.rng() * items.length)] : undefined);
     if (!it) return false;
     this.scene = { item: it, until: this.now() + ms, text: this.pick(it.say) };
@@ -308,11 +351,11 @@ export class BuddyApp {
     const sp = this.speech;
     if (this.pack.visible()) {
       const run = pk!.pups.filter((p) => p.status === "run" || p.status === "wait").length;
-      if (!pk!.pups.length) return "стая собирается…";
-      if (!run) return spec(this.s).packSay?.home?.[sp.stbPick % spec(this.s).packSay!.home.length] ?? "стая вернулась!";
-      const ps = spec(this.s).packSay;
+      if (!pk!.pups.length) return this.t("packGather");
+      if (!run) return this.spec().packSay?.home?.[sp.stbPick % this.spec().packSay!.home.length] ?? this.t("packHome");
+      const ps = this.spec().packSay;
       if (ps?.run?.length) return ps.run[sp.stbPick % ps.run.length].replace("{n}", String(run));
-      return this.isDog() ? `пасёт стаю: ${run} в деле` : `субагентов в работе: ${run}`;
+      return this.t(this.isDog() ? "packRunDog" : "packRun", { count: run });
     }
     const m = this.mood();
     const ACT_TOPIC: Partial<Record<PxState, Topic>> = { think: "stbThink", sniff: "stbSniff", dig: "stbDig", alert: "stbAlert", sit: "stbSit" };
@@ -341,6 +384,7 @@ export class BuddyApp {
 
   /** Экран готов: поздороваться и запустить анимацию */
   greet() {
+    if (this.phraseLoadError) this.ui?.notify(this.t("failed", { error: errorText(this.phraseLoadError, this.locale()) }), "warning");
     const greet = this.greetingTopic(); // до activity(): нужно знать, сколько тебя не было
     this.tick();
     this.activity();
@@ -398,7 +442,7 @@ export class BuddyApp {
       // радостный голос: тесты зелёные, сборка прошла, запушили; тревожный — на удаление файлов
       if (c && ["testOk", "buildOk", "gitPush", "rm"].includes(c.t) && this.bark(2500, false)) {
         this.speech.lastChat = this.now();
-        this.say(c.t === "rm" && this.isDog() ? "ГАВ! (не трогай файлы)" : `${this.pick(this.barkSay())} ${this.speech.line(c.t)}`, 4000);
+        this.say(c.t === "rm" && this.isDog() ? this.t("guardFiles") : `${this.pick(this.barkSay())} ${this.speech.line(c.t)}`, 4000);
       } else if (c) this.speech.chat(c.t, c.p);
     } else {
       if (packAlreadyPenalized) this.s.errors++;
@@ -422,7 +466,7 @@ export class BuddyApp {
     const s = this.s;
     if (level(s.xp) > this.levelAtStart) {
       const grewUp = spec(s).grown && level(s.xp) >= GROW_LEVEL && this.levelAtStart < GROW_LEVEL;
-      this.say(grewUp ? `${s.name} вырос! теперь это ${labelFor(s)}` : `${this.speech.line("levelup")} lv.${level(s.xp)}`, 8000);
+      this.say(grewUp ? this.t("grown", { name: s.name, species: labelFor(s, this.locale()) }) : `${this.speech.line("levelup")} lv.${level(s.xp)}`, 8000);
       this.react("love", 6000);
     } else if (!hadErrors) {
       if (STREAKS.includes(s.cleanRuns!)) this.speech.shout("streak", 6000);

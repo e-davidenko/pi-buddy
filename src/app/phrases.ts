@@ -1,76 +1,81 @@
-/** Свои фразы пользователя: дописать выученные, почистить невалидные, создать шаблон */
-import { SAY } from "../content/phrases.ts";
-import { SPECIES } from "../content/species.ts";
+/** Localized custom phrase sets. Never overwrite malformed or unknown-version files. */
 import { TOPICS } from "../content/topicHints.ts";
-import { cleanPhrases, phraseProblem } from "../domain/topics.ts";
-import type { Topic } from "../domain/types.ts";
+import { cleanPhrases, phraseProblem, type PhraseProblem } from "../domain/topics.ts";
+import type { Locale, Topic } from "../domain/types.ts";
 import type { BuddyApp } from "./buddy.ts";
+import { phraseFile, phraseSet, type PhraseFile } from "./phraseFile.ts";
+import { message, posesFor } from "./localization.ts";
 
-/** Дописать фразы в buddy-phrases.json (для текущего вида) и сразу начать их использовать */
-export function savePhrases(app: BuddyApp, add: Partial<Record<Topic, string[]>>): number {
+function updateFile(app: BuddyApp, change: (file: PhraseFile) => void): PhraseFile {
   const store = app.ports.phrases;
-  let file: any = {};
-  try {
-    file = store.read() ?? {};
-  } catch {
-    /* файла ещё нет */
-  }
-  const sp = (file[app.s.species] ??= {});
+  const update = (raw: unknown) => {
+    const file = phraseFile(raw);
+    change(file);
+    return file;
+  };
+  const next = store.update
+    ? store.update(update) as PhraseFile
+    : update(store.exists() ? store.read() : {});
+  if (!store.update) store.write(next);
+  app.speech.setCustom(next);
+  return next;
+}
+export function savePhrases(app: BuddyApp, add: Partial<Record<Topic, string[]>>, locale: Locale = app.locale(), species = app.s.species): number {
   let n = 0;
-  for (const [t, list] of Object.entries(add)) {
-    if (!list?.length) continue;
-    sp[t] = [...(Array.isArray(sp[t]) ? sp[t] : []), ...list];
-    n += list.length;
-  }
-  if (!n) return 0;
-  store.write(file);
-  app.speech.setCustom(file);
+  if (!Object.values(add).some((x) => x?.length)) return 0;
+  updateFile(app, (file) => {
+    const set = (file.locales[locale] ??= { common: {}, species: {} });
+    const target = (set.species[species] ??= {});
+    for (const [topic, list] of Object.entries(add)) {
+      const t = topic as Topic;
+      const custom = phraseSet(file, locale);
+      const existing = [...(custom[t] ?? []), ...(custom[species]?.[t] ?? [])];
+      const clean = cleanPhrases(t, list, existing);
+      if (!clean.length) continue;
+      target[t] = [...(target[t] ?? []), ...clean];
+      n += clean.length;
+    }
+  });
   return n;
 }
-
-/** Фразы, предложенные моделью или агентом: проверить (длина, поза, повторы) и сохранить */
-export function learnPhrases(app: BuddyApp, t: Topic, list: unknown): { list: string[]; n: number } {
-  const clean = cleanPhrases(t, list, app.speech.pool(t));
-  return { list: clean, n: savePhrases(app, { [t]: clean }) };
+export function learnPhrases(app: BuddyApp, t: Topic, list: unknown, locale: Locale = app.locale()): { list: string[]; n: number } {
+  // Other-language tool requests use that language's built-ins too.
+  const existing = app.phrasePool(t, locale, app.s.species);
+  const clean = cleanPhrases(t, list, existing);
+  return { list: clean, n: savePhrases(app, { [t]: clean }, locale) };
 }
-
-/** Убрать из своих фраз то, что никогда не прозвучит: длинное или с невозможной позой. null — файла нет */
+export function problemText(problem: PhraseProblem, locale: Locale): string {
+  if (problem.code === "empty") return message(locale, "emptyPhrase");
+  if (problem.code === "long") return message(locale, "longPhrase");
+  const names = posesFor(locale);
+  return message(locale, "invalidPose", { allowed: problem.allowed.map((p) => names[p]).join("/"), pose: names[problem.pose as keyof typeof names] ?? problem.pose });
+}
 export function cleanPhraseFile(app: BuddyApp): string[] | null {
-  const store = app.ports.phrases;
-  let file: any = {};
-  try {
-    file = store.read() ?? {};
-  } catch {
-    return null;
-  }
+  if (!app.ports.phrases.exists()) return null;
   const removed: string[] = [];
-  const fix = (obj: any) => {
-    for (const [t, list] of Object.entries(obj ?? {})) {
-      if (!TOPICS.includes(t as Topic) || !Array.isArray(list)) continue;
-      obj[t] = list.filter((x: unknown) => {
-        const why = typeof x === "string" ? phraseProblem(t as Topic, x) : "не строка";
-        if (why) removed.push(`${t}: «${String(x)}» — ${why}`);
-        return !why;
-      });
+  updateFile(app, (file) => {
+    for (const [locale, set] of Object.entries(file.locales)) {
+      for (const [species, topics] of [["common", set.common], ...Object.entries(set.species)] as const) {
+        for (const [topic, list] of Object.entries(topics)) {
+          if (!TOPICS.includes(topic as Topic)) continue;
+          topics[topic as Topic] = list!.filter((text) => {
+            const problem = phraseProblem(topic as Topic, text);
+            if (problem) removed.push(`${locale}/${species}/${topic}: «${text}» — ${problemText(problem, app.locale())}`);
+            return !problem;
+          });
+        }
+      }
     }
-  };
-  fix(file);
-  for (const k of Object.keys(SPECIES)) if (file[k] && typeof file[k] === "object") fix(file[k]);
-  if (removed.length) {
-    store.write(file);
-    app.speech.setCustom(file);
-  }
+  });
   return removed;
 }
-
-/** Создать файл своих фраз с подсказкой, если его ещё нет */
 export function ensurePhraseTemplate(app: BuddyApp) {
-  const store = app.ports.phrases;
-  if (store.exists()) return;
-  store.write({
-    _help: "Свои фразы дополняют встроенные. Темы: " + Object.keys(SAY).join(", ") +
-      ". Для конкретного вида: ключ вида (veo, gsd, cat...) с темами внутри. После правки — /reload.",
-    done: ["моя фраза после хода"],
-    veo: { hello: ["гав! моя фраза для ВЕО"] },
+  const locale = app.locale();
+  updateFile(app, (file) => {
+    file._help = app.t("phraseHelp", { topics: TOPICS.join(", ") });
+    file.locales[locale] ??= {
+      common: { done: [app.t("phraseExample")] },
+      species: { veo: { hello: [app.t("phraseSpeciesExample")] } },
+    };
   });
 }

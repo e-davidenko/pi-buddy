@@ -86,8 +86,8 @@ test("инструменты → поза и тема", () => {
 });
 
 test("фразы от модели: длина, поза, повторы", () => {
-  assert.equal(phraseProblem("error", "@stand:стоит"), "пёс тут лежит, а не стоит");
-  assert.equal(phraseProblem("done", "x"), "пустая");
+  assert.deepEqual(phraseProblem("error", "@stand:стоит"), { code: "pose", allowed: ["lie"], pose: "stand" });
+  assert.deepEqual(phraseProblem("done", "x"), { code: "empty" });
   const out = cleanPhrases("done", ["«ура!»", "ура!", "готово", "@lie:лёг", "очень-очень-очень длинная фраза без конца"], ["готово"]);
   assert.deepEqual(out, ["ура!"]);
 });

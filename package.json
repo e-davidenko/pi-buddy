@@ -1,7 +1,7 @@
 {
   "name": "@euhenio/pi-buddy",
   "version": "2.4.4",
-  "description": "Тамагочи для pi: питомец сбоку от поля ввода — пиксельные ВЕО, овчарка, кот, утка, сова, дракон и другие; реагирует на работу агента",
+  "description": "A terminal tamagotchi for pi: animated pixel pets that react to your coding agent, with English and Russian speech",
   "keywords": [
     "pi-package",
     "pi-extension",
@@ -16,7 +16,10 @@
     "README.md",
     "docs/behavior.md",
     "preview.png",
-    "media/demo.gif"
+    "media/demo.gif",
+    "README.ru.md",
+    "docs/behavior.ru.md",
+    "docs/localization.md"
   ],
   "pi": {
     "extensions": [

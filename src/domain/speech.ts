@@ -6,6 +6,8 @@ import { OWN_ONLY } from "./topics.ts";
 import type { Pose, Topic } from "./types.ts";
 
 export interface SpeechEnv {
+  locale?(): string;
+  custom?(): any;
   now(): number;
   rng(): number;
   species(): string;
@@ -40,7 +42,14 @@ export class Speech {
 
   setCustom(file: any) {
     this.custom = file;
+    this.reset();
+  }
+
+  reset() {
     this.bags.clear();
+    this.stbTopic = "";
+    this.stbText = "";
+    this.stbSince = 0;
   }
 
   /** Все реплики темы, подходящие к текущей позе */
@@ -52,7 +61,8 @@ export class Speech {
     // технические темы смешиваем (собака тоже радуется зелёным тестам по-человечески),
     // а реплики про тело и дежурные — только свои
     const base = !mine ? common : OWN_ONLY.has(t) ? mine : [...mine, ...common];
-    const all = [...base, ...own(this.custom[t]), ...own(this.custom[e.species()]?.[t])];
+    const custom = e.custom?.() ?? this.custom;
+    const all = [...base, ...own(custom[t]), ...own(custom[e.species()]?.[t])];
     const ps = e.pose();
     // фраза с меткой позы — только в своей позе; без позы (ASCII) метка просто снимается
     const fit = all.flatMap((x) => {
@@ -67,7 +77,7 @@ export class Speech {
   line(t: Topic): string {
     const e = this.env;
     const p = this.pool(t);
-    const key = `${e.species()}:${t}:${e.pose() ?? ""}`;
+    const key = `${e.locale?.() ?? ""}:${e.species()}:${t}:${e.pose() ?? ""}`;
     let bag = this.bags.get(key);
     if (!bag?.length || bag.some((i) => i >= p.length)) {
       bag = [...p.keys()].sort(() => e.rng() - 0.5);
@@ -107,7 +117,7 @@ export class Speech {
   standby(t: Topic, rotateMs: number): string {
     const e = this.env;
     const now = e.now();
-    const key = `${e.species()}:${t}:${e.pose() ?? ""}`; // сменилась поза — сменилась и фраза
+    const key = `${e.locale?.() ?? ""}:${e.species()}:${t}:${e.pose() ?? ""}`; // сменилась поза — сменилась и фраза
     if (key !== this.stbTopic || now - this.stbSince > rotateMs) {
       this.stbTopic = key;
       this.stbText = this.line(t);

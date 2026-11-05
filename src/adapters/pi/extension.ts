@@ -5,7 +5,7 @@
 import * as os from "node:os";
 import { readFileSync } from "node:fs";
 import { BuddyApp } from "../../app/buddy.ts";
-import { COMMAND_HELP, completions, runCommand } from "../../app/commands.ts";
+import { completions, runCommand } from "../../app/commands.ts";
 import type { ModelPort } from "../../app/learn.ts";
 import type { Env } from "../../app/ports.ts";
 import { SPECIES } from "../../content/species.ts";
@@ -28,6 +28,7 @@ const processEnv = (): Env => ({
   argv: process.argv.slice(2),
   idleSleepMs: Number(process.env.PI_BUDDY_IDLE_SLEEP_MS) || 10 * 60_000,
   autoPxMode,
+  locale: process.env.LC_ALL || process.env.LC_MESSAGES || process.env.LANG || "",
 });
 
 /** Модель pi для /buddy learn: отдельный вызов, в историю сессии ничего не попадает */
@@ -102,6 +103,13 @@ export function createBuddy(pi: any) {
     app.greet();
   });
 
+  // Tool definitions stay stable; refresh language context for each agent request.
+  pi.on("before_agent_start", async (event: any) => {
+    if (!tool.ready || typeof event?.systemPrompt !== "string") return;
+    app.sync(false);
+    return { systemPrompt: event.systemPrompt + `\nThe buddy terminal pet currently uses ${app.locale()}. When the user asks to teach it phrases, generate them in this language unless the user explicitly requests another supported locale (ru/en). Pass the chosen locale to buddy_phrases. Do not call this tool without a user request.` };
+  });
+
   pi.on("agent_start", async () => app.agentStart());
   pi.on("turn_start", async () => app.turnStart());
   pi.on("tool_execution_start", async (e: any) => {
@@ -134,8 +142,8 @@ export function createBuddy(pi: any) {
   }
 
   pi.registerCommand("buddy", {
-    description: COMMAND_HELP,
-    getArgumentCompletions: completions,
+    description: "Terminal pet / Тамагочи: /buddy … | lang ru/en/auto",
+    getArgumentCompletions: (prefix: string) => completions(prefix, app.locale()),
     handler: async (args: string, ctx: any) => {
       app.ui = ctx.ui ?? app.ui;
       await runCommand(app, args, ctx.ui, modelPort(ctx));

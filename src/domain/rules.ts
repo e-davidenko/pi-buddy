@@ -102,7 +102,7 @@ export function relax(s: BuddyState, now: number): void {
  */
 export const COUNTERS = ["xp", "toolCalls", "errors", "generations", "tokensOut"] as const;
 export const GAUGES = ["food", "joy", "energy"] as const;
-export const CONFIG = ["name", "species", "rarity", "shiny", "born", "visible", "placement", "size", "muted", "anim", "pxColor"] as const;
+export const CONFIG = ["language", "name", "species", "rarity", "shiny", "born", "visible", "placement", "size", "muted", "anim", "pxColor"] as const;
 
 /** Шкалы, «доведённые» до момента now (как relax): чтобы спад за одно время не учитывать дважды */
 export function relaxedGauges(st: BuddyState, now: number): Record<(typeof GAUGES)[number], number> {

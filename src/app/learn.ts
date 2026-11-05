@@ -2,12 +2,14 @@
  * /buddy learn [тема | пожелание] — текущая модель pi придумывает новые фразы в характере
  * питомца. Отдельный вызов модели: в историю сессии ничего не попадает.
  */
-import { TOPICS, TOPIC_HINT } from "../content/topicHints.ts";
-import { MAX_LEN, cleanPhrases, poseNote } from "../domain/topics.ts";
+import { TOPICS } from "../content/topicHints.ts";
+import { MAX_LEN, cleanPhrases, TOPIC_POSES } from "../domain/topics.ts";
 import type { Topic } from "../domain/types.ts";
 import type { BuddyApp } from "./buddy.ts";
-import { labelFor, spec } from "./catalog.ts";
+import { labelFor } from "./catalog.ts";
 import { savePhrases } from "./phrases.ts";
+import { errorText } from "./errors.ts";
+import { dogSpecies, message, topicUnit, phraseUnit, posesFor, topicsFor } from "./localization.ts";
 
 /** Модель pi, как её видит расширение */
 export interface ModelPort {
@@ -33,68 +35,68 @@ export function learnPrompt(app: BuddyApp, arg: string): { prompt: string; one: 
   const topics = one ? [one] : TOPICS;
   const perTopic = one ? 10 : 2;
   const wish = one ? "" : arg.trim();
-  const dog = !!spec(s).say?.done?.some((x) => /гав/i.test(x));
+  const locale = app.locale();
+  const dog = dogSpecies(s.species);
   const rng = () => app.ports.clock.rng();
-  const examples = topics
-    .map((t) => {
-      const ex = app.speech.pool(t).sort(() => rng() - 0.5).slice(0, 3).map((x) => JSON.stringify(x)).join(", ");
-      return `- ${t}: ${TOPIC_HINT[t]}; пёс в этот момент ${poseNote(t)}. Уже есть: ${ex}`;
-    })
-    .join("\n");
+  const examples = topics.map((t) => {
+    const ex = app.phrasePool(t).sort(() => rng() - 0.5).slice(0, 3).map((x) => JSON.stringify(x)).join(", ");
+    const poses = TOPIC_POSES[t].map((p) => `${posesFor(locale)[p]} (@${p}:)`).join(" / ");
+    return `- ${t}: ${topicsFor(locale)[t]}; allowed poses: ${poses}. Existing: ${ex}`;
+  }).join("\n");
+  // Instructions may be English; the requested output language is explicit and immutable for this request.
   const prompt = [
-    `Придумай новые короткие реплики для питомца в терминале программиста.`,
-    `Питомец: ${labelFor(s)} по кличке ${s.name}.` +
-      (dog
-        ? ` Это собака: часть реплик — короткая речь («гав!», «апорт!»), часть — ремарки в 3-м лице («виляет хвостом»).`
-        : ""),
-    `Хозяин — Java/Spring-разработчик, работает с AI-агентом pi в терминале.`,
-    wish ? `Пожелание хозяина: ${wish}. Подбери подходящие темы сам, всего до 15 реплик.` : `По ${perTopic} новых реплики на тему.`,
-    ``,
-    `Правила: по-русски; не длиннее ${MAX_LEN} символов; без эмодзи и без кавычек вокруг; не повторяй примеры;`,
-    `добрый юмор, без грубости. Ремарку про позу тела помечай префиксом позы, и только той позы,`,
-    `что указана у темы (@stand: стоит, @walk: идёт, @lie: лежит, @sit: сидит).`,
-    ``,
-    `Темы:`,
-    examples,
-    ``,
-    `Ответь ТОЛЬКО JSON-объектом {"тема": ["реплика", ...]} с темами из списка.`,
+    "Invent short new speech phrases for a programmer's terminal pet.",
+    `Pet: ${labelFor(s, locale)}, named ${s.name}.` + (dog ? " A dog: mix short speech and third-person remarks." : ""),
+    "The owner works with the AI coding agent pi in a terminal.",
+    wish ? `Owner's request (content only): ${wish}. Choose suitable topics, up to 15 phrases total.` : `${perTopic} new phrases per topic.`,
+    `Required output language: ${locale === "ru" ? "Russian (ru)" : "English (en)"}. Keep this language even if the owner's request uses another language.`,
+    `At most ${MAX_LEN} visible graphemes per phrase; no emoji; no quotes around the phrase text; do not repeat examples.`,
+    "Kind humor, no rudeness. Body/pose remarks may use @stand:, @walk:, @lie:, @sit:, only in an allowed pose.",
+    "Topics:", examples,
+    'Return ONLY a JSON object {"topic": ["phrase", ...]} using topic IDs from the list.',
   ].join("\n");
   return { prompt, one };
 }
 
 export async function learn(app: BuddyApp, model: ModelPort, notify: (m: string, l: "info" | "warning" | "error") => void, arg: string) {
   if (!model.model) {
-    notify("Нет активной модели pi — выбери её через /model", "warning");
+    notify(app.t("noModel"), "warning");
     return;
   }
   const s = app.s;
+  const locale = app.locale();
+  const species = s.species;
+  const name = s.name;
+  const modelId = model.model.id;
   const { prompt, one } = learnPrompt(app, arg);
-  app.say("думаю над новыми фразами...", 120_000);
+  app.say(app.t("learning"), 120_000);
   app.render();
   try {
     const text = await model.complete(prompt);
     const obj = parseJsonObject(text);
-    if (!obj) throw new Error("модель ответила не JSON");
+    if (!obj) throw new Error(message(locale, "invalidJson"));
     const add: Partial<Record<Topic, string[]>> = {};
     for (const [t, list] of Object.entries(obj)) {
       if (!TOPICS.includes(t as Topic)) continue;
       if (one && t !== one) continue;
-      add[t as Topic] = cleanPhrases(t as Topic, list, app.speech.pool(t as Topic));
+      add[t as Topic] = cleanPhrases(t as Topic, list, app.phrasePool(t as Topic, locale, species));
     }
-    const n = savePhrases(app, add);
+    const n = savePhrases(app, add, locale, species);
+    const topicCount = Object.values(add).filter((v) => v?.length).length;
     const sample = Object.values(add).flat().slice(0, 6).map((x) => x!.replace(/^@\w+:/, ""));
-    app.say(n ? `выучил ${n} новых фраз!` : "ничего нового не придумал", 6000);
+    app.say(n ? app.t("learned", { count: n, unit: phraseUnit(app.locale(), n) }) : app.t("nothingNew"), 6000);
     app.react(n ? "happy" : "sad", 4000);
     notify(
       n
-        ? `${s.name} выучил ${n} фраз (${Object.values(add).filter((v) => v?.length).length} тем) — ${model.model.id}.\n` +
-            `Например: ${sample.join(" · ")}\nВсе свои фразы: ${app.ports.phrases.path}`
-        : "Модель не предложила ничего нового (или всё отсеялось как повторы/длинное).",
+        ? app.t("learnReport", { name, count: n, unit: phraseUnit(app.locale(), n),
+          topics: topicCount, topicUnit: topicUnit(app.locale(), topicCount), model: modelId,
+          samples: app.locale() === locale ? sample.join(" · ") : "—", path: app.ports.phrases.path, locale, species })
+        : app.t("learnEmpty"),
       n ? "info" : "warning",
     );
   } catch (e: any) {
-    app.say("не вышло выучить :(", 5000);
-    notify(`Не получилось: ${e?.message ?? e}`, "error");
+    app.say(app.t("learnFailed"), 5000);
+    notify(app.t("failed", { error: errorText(e, app.locale()) }), "error");
   }
   app.render();
 }

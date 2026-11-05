@@ -1,113 +1,132 @@
 # @euhenio/pi-buddy
 
-Тамагочи для [pi](https://pi.dev): питомец живёт в полосе справа от поля ввода и реагирует на работу агента — идёт, пока агент работает, виляет хвостом после успешного хода, грустит на ошибках, засыпает в простое.
+[Русский](README.ru.md) · English
 
-[Исходный код на GitHub](https://github.com/e-davidenko/pi-buddy) · [Сообщить об ошибке](https://github.com/e-davidenko/pi-buddy/issues/new)
+A terminal tamagotchi for [pi](https://pi.dev). Your pet lives beside the input and reacts to the coding agent: walks while it works, celebrates successful turns, gets sad about errors, and naps when idle.
 
-![Демо pi-buddy: ВЕО и уточка, субагенты, реакции, реплики и игры](https://raw.githubusercontent.com/e-davidenko/pi-buddy/main/media/demo.gif)
+[Source on GitHub](https://github.com/e-davidenko/pi-buddy) · [Report an issue](https://github.com/e-davidenko/pi-buddy/issues/new)
 
-*30 секунд: основные возможности на настоящих спрайтах питомцев. Постановочное демо.*
+![pi-buddy demo: shepherd, duck, subagents, speech and toys](https://raw.githubusercontent.com/e-davidenko/pi-buddy/main/media/demo.gif)
 
-## Установка
+*30 seconds of the main features using the actual pet sprites. Staged demo; recorded with Russian speech.*
+
+## Install
 
 ```bash
-pi install ./pi-buddy                              # из локальной папки
-pi install git:github.com/e-davidenko/pi-buddy      # из git
-pi install npm:@euhenio/pi-buddy                   # из npm
+pi install ./pi-buddy                              # local directory
+pi install git:github.com/e-davidenko/pi-buddy      # git
+pi install npm:@euhenio/pi-buddy                   # npm
 ```
 
-Попробовать без установки: `pi -e ./pi-buddy`.
+Try without installing: `pi -e ./pi-buddy`.
 
-> Если раньше расширение лежало файлом в `~/.pi/agent/extensions/buddy.ts` — удалите тот файл,
-> иначе будут две команды `/buddy`. Питомец сохранится: его состояние в `~/.pi/agent/buddy.json`.
+If you previously installed `~/.pi/agent/extensions/buddy.ts` manually, remove that old file to avoid duplicate `/buddy` commands. Your pet stays in `~/.pi/agent/buddy.json`.
 
-## Анимация
+## Language
 
-У каждого питомца — пиксельный спрайт и 30 кадров: моргание, свои «фирменные» движения в простое
-(кот машет хвостом и умывается, утка кивает, сова подмигивает, дракон пускает дымок…), ходьба,
-пока агент работает, прыжки от радости, позы «лежит», «грустит» и «спит» с дыханием.
-Во время работы агента питомец показывает, чем тот занят: думает, ищет (агент читает код), работает
-(правит файлы), настороже (команда в терминале), сидит и ждёт (тесты, сборка, субагенты), а на зелёных
-тестах подаёт голос. Позы у каждого свои: собака нюхает след и гавкает, кот крадётся и закапывает баг,
-утка ныряет хвостом вверх и высиживает билд в гнезде, сова листает книгу и ухает, дракон роет сокровища
-и выдыхает пламя, призрак ищет с лупой и пугает «бу!», аксолотль роет песок и пускает пузыри,
-блоб шлёпает ложноножками. Каждая поза активности держится не меньше 5 секунд.
-Смена анимаций идёт через базовую стойку, без резких скачков. В простое питомец иногда
-сам берёт любимую игрушку.
+```text
+/buddy lang en
+/buddy lang ru
+/buddy lang auto
+/buddy lang
+```
 
-### Субагенты — «стая»
+English and Russian cover the interface, pet speech, toys, species labels and phrase learning. Commands and IDs stay the same in both languages. Pet names are kept as entered.
 
-Когда агент запускает субагентов (инструмент `subagent` из примеров pi и похожие — `task`, `delegate`, `spawn_agents`…),
-над питомцем появляются его мини-копии (щенки, котята, утята…), по одному на субагента (до трёх, остальные — `+N`).
-Каждый щенок показывает, чем занят его субагент: нюхает, копает, сидит на тестах, виляет хвостом на ✓, грустит на ✗;
-в цепочке (`chain`) следующие ждут своей очереди. Сам питомец в это время сидит и «пасёт стаю», а когда все вернутся —
-гавкает. Фоновые запуски [pi-subagents](https://github.com/nicobailon/pi-subagents) (`async`) тоже понимает: инструмент возвращается сразу,
-а стая бегает, пока субагент действительно не закончит (живой статус берётся из его `status.json`). Опыт за работу субагентов начисляется питомцу родительской сессии (сами дочерние pi-процессы состояние не трогают).
+New installations use `auto`: the first nonempty `LC_ALL`, `LC_MESSAGES` or `LANG` determines the language. Russian regional locales select `ru`; other locales, including `C` and `POSIX`, select `en`. Existing pets without a language setting keep Russian until you change it.
 
-## Команды
+The language setting is shared between terminals and survives `/buddy hatch`. With `auto`, each terminal uses its own environment. Switching languages clears the current bubble and play scene so old speech does not linger.
 
-| Команда | Что делает |
+## Animation
+
+Choose a pixel East European Shepherd, German Shepherd, blob, cat, duck, ghost, owl, axolotl or dragon. Pets blink, walk, celebrate, sleep and have their own idle motions: a cat washes, a duck nods, a dragon puffs smoke.
+
+Activity poses follow the agent: thinking, searching, editing, watching shell commands, or sitting through tests and builds. Dogs sniff trails; cats bury bugs; ducks sit on a build nest; owls study books. Each activity lasts at least five seconds, with transitions through the base stance. Idle pets sometimes pick up a favorite toy.
+
+### Subagents: the pack
+
+When the agent launches subagents (`subagent`, `task`, `delegate`, `spawn_agents` and similar tools), miniature helpers appear above the pet. Up to three are drawn, followed by `+N` for the rest. Each helper shows its activity and success/failure; chained helpers wait their turn. The parent pet watches over them and greets their return.
+
+Background [pi-subagents](https://github.com/nicobailon/pi-subagents) runs are supported too. The pack stays active until the underlying run finishes, using its live `status.json`. Subagent XP is recorded by the parent session; headless child processes do not modify the shared pet.
+
+## Commands
+
+| Command | Action |
 |---|---|
-| `/buddy` | показать / спрятать |
-| `/buddy choose [вид]` | выбрать питомца: ВЕО (пиксели), немецкая овчарка, блоб, кот, утка, призрак, сова, аксолотль, дракон — все пиксельные, с анимацией |
-| `/buddy feed` `pet` `nap` | покормить, погладить, уложить |
-| `/buddy play [предмет]` | поиграть любимой игрушкой: у каждого их две (мячик и косточка, клубок и мышка, фрисби и канат…) |
-| `/buddy name <кличка>` | дать имя |
-| `/buddy stats` | статистика |
-| `/buddy version` | версия расширения для сообщения об ошибке |
-| `/buddy dock` `compact` `big` `top` | где и как показывать |
-| `/buddy mute` `unmute` | болтовня выкл/вкл |
-| `/buddy anim on\|off\|auto` | анимация (auto — не мешает прокрутке вне fullscreen) |
-| `/buddy pxcolor fg\|bg\|auto` | отрисовка пиксельного пса (fg — для терминала IntelliJ) |
-| `/buddy bark` (`голос`) | подать голос: гав, мяу, кря, уху… |
-| `/buddy learn [тема\|пожелание]` | модель pi придумает новые фразы |
-| `/buddy phrases` / `phrases clean` | файл своих фраз / убрать те, что не прозвучат (длинные, не та поза) |
+| `/buddy` | Show or hide |
+| `/buddy choose [species]` | Choose a pet |
+| `/buddy feed` `pet` `nap` | Feed, pet, or rest |
+| `/buddy play [item]` | Play with a favorite toy; accepts stable item IDs or local names |
+| `/buddy name <name>` | Rename |
+| `/buddy stats` | Show statistics |
+| `/buddy version` | Show extension version |
+| `/buddy dock` `compact` `big` `top` | Change placement or size |
+| `/buddy mute` `unmute` | Disable or enable chatter |
+| `/buddy anim on\|off\|auto` | Animation; auto avoids disrupting scrolling outside fullscreen |
+| `/buddy pxcolor fg\|bg\|auto` | Pixel colors; fg works in IntelliJ terminals |
+| `/buddy bark` | Give voice: woof, meow, quack, hoot… |
+| `/buddy lang ru\|en\|auto` | Change language; no argument shows current setting |
+| `/buddy learn [topic\|request]` | Ask the current pi model for new phrases |
+| `/buddy phrases` | Open the custom phrase file path and ensure a template for this language |
+| `/buddy phrases clean` | Remove overlong phrases and impossible pose tags in every language |
+| `/buddy hatch` | Start a new pet after confirmation |
 
-В чате можно попросить агента: «добавь питомцу фраз про Kafka» — он вызовет инструмент `buddy_phrases`.
+To choose without a menu, enter `/buddy choose veo_px` or `/buddy choose gsd`. Other IDs: `blob`, `cat`, `duck`, `ghost`, `owl`, `axolotl`, `dragon`, `veo`. Name, level and XP are preserved. If a menu is hidden, press Esc and enter a complete command.
 
-Чтобы выбрать собаку без меню, введи полную команду в одной строке: `/buddy choose veo_px` — пиксельный ВЕО,
-`/buddy choose gsd` — немецкая овчарка. Имя, уровень и опыт сохранятся.
-Если после `/buddy choose` меню не видно, нажми Esc и используй одну из команд из показанного списка.
+Each pixel pet has two toys. For example, `/buddy play bone` and `/buddy play ball` select the pixel shepherd's toys. Existing Russian toy names and `гав`/`голос` voice aliases still work.
 
-## Файлы
+## Custom and learned phrases
 
-- `~/.pi/agent/buddy.json` — состояние питомца
-- `~/.pi/agent/buddy.json.bak` — предыдущая сохранённая версия для восстановления
-- `~/.pi/agent/buddy-phrases.json` — свои и выученные фразы
+Ask the agent “teach my pet some Kafka phrases” to use `buddy_phrases`, or run `/buddy learn`. Generation uses the active language. You can explicitly request another supported language through the tool's `locale` parameter. Model output is checked for length, allowed poses and duplicates; generation quality still depends on the selected model.
 
-Опыт сохраняется после каждого хода модели, в конце запроса и раз в 30 секунд во время работы.
-Терминалы сливают прогресс под общей файловой блокировкой (`buddy.json.lock`), поэтому их
-одновременные сохранения не перезаписывают друг друга. Дочерние процессы без интерфейса прогресс не сохраняют.
-При ошибке сохранения прогресс остаётся в памяти до следующей попытки, а pi показывает предупреждение.
-Если основной файл повреждён, читается резервная копия. Если обе версии не читаются,
-расширение сообщает об ошибке, а не создаёт нового питомца поверх старого состояния.
-Команда `/buddy hatch` после подтверждения создаёт нового питомца со сбросом опыта,
-сохраняя настройки интерфейса. Если диалог подтверждения недоступен, введи `/buddy hatch confirm`.
+Custom phrases extend built-ins only in their own language. The version 2 file looks like this:
 
-Ручная игра не даёт XP. Ошибка инструмента и неуспешное возвращение стаи отнимают
-10 пунктов радости; бонус за завершение даётся только при успехе.
-Все правила ухода, настроения и общего прогресса описаны в [правилах поведения](docs/behavior.md).
+```json
+{
+  "version": 2,
+  "locales": {
+    "en": {
+      "common": { "done": ["another bug defeated!"] },
+      "species": { "cat": { "hello": ["meow, ready to code?"] } }
+    },
+    "ru": {
+      "common": { "done": ["ещё один баг побеждён!"] },
+      "species": {}
+    }
+  }
+}
+```
 
-Расширение само в сеть не ходит; к модели pi обращаются только `/buddy learn` и инструмент `buddy_phrases`.
+Legacy files are read as Russian. They are converted on the first edit or `/buddy phrases`, with the original saved as `buddy-phrases.json.bak`. Reading alone does not rewrite them. Before downgrading to a version without v2 support, restore the legacy backup (keep a copy of v2 to retain newer phrases). Unknown versions or malformed data are reported and preserved. After manual editing, run `/reload`; learned phrases are available immediately.
 
-## Ошибки и предложения
+Phrases may contain up to 34 visible graphemes, excluding an optional pose prefix (`@stand:`, `@walk:`, `@lie:`, `@sit:`). A tagged phrase must fit the topic's possible poses. If you change language or species while `/buddy learn` is waiting, its result is saved to the original language and species, identified in the completion message.
 
-Нашли ошибку или хотите предложить улучшение? [Создайте issue на GitHub](https://github.com/e-davidenko/pi-buddy/issues/new).
-Перед этим проверьте [существующие обсуждения](https://github.com/e-davidenko/pi-buddy/issues) — возможно, проблема уже известна.
+## Files and persistence
 
-Для сообщения об ошибке укажите версии pi и pi-buddy, ОС и терминал, шаги для повторения,
-ожидаемое и фактическое поведение. Если проблема связана с отображением, приложите скриншот.
+- `~/.pi/agent/buddy.json` — shared pet state and language setting
+- `~/.pi/agent/buddy.json.bak` — previous readable pet state
+- `~/.pi/agent/buddy-phrases.json` — custom and learned phrases by language
+- `~/.pi/agent/buddy-phrases.json.bak` — original legacy phrases, created on migration
 
-## Устройство кода
+Progress is saved after every model turn, at request completion, and every 30 seconds while working. File locks protect merges between terminals. Failed progress saves stay in memory for retry; warnings are shown. If the primary state is damaged, the backup is read. If neither is readable, the extension reports the error instead of overwriting your pet.
 
-Расширение — обычные TypeScript-модули: pi загружает их сам, сборка не нужна, зависимостей нет.
-`extensions/buddy.ts` — точка входа, весь код в `src/`, разложен по слоям (зависимости идут только внутрь):
+Phrase edits also use a lock and atomic replacement. If another terminal is writing, the edit reports an error; repeat the command. Other languages and species are preserved. Manual file edits should be made while phrase learning is idle.
 
-| Слой | Что там |
+`/buddy hatch` resets the pet and XP, keeping display and language settings. Without a confirmation dialog, use `/buddy hatch confirm`. Manual care gives no XP. Tool errors and failed pack returns reduce joy by 10; completion bonuses apply only on success. See the [behavior rules](docs/behavior.md).
+
+The extension makes no network calls itself. `/buddy learn` uses the pi model; `buddy_phrases` stores phrases supplied by the agent.
+
+## Issues and development
+
+[Check existing issues](https://github.com/e-davidenko/pi-buddy/issues) or [report a problem](https://github.com/e-davidenko/pi-buddy/issues/new). Include pi and pi-buddy versions, OS, terminal, reproduction steps, expected and actual behavior, and a screenshot for display problems.
+
+Pi loads the TypeScript modules directly; no build is required. Runtime uses pi's peer packages and JavaScript `Intl`; there are no new localization dependencies.
+
+| Layer | Responsibility |
 |---|---|
-| `src/domain` | правила питомца (шкалы, опыт, слияние между терминалами), настроение, автомат поз (очередь занятий, долгое «думает», переходы), стая субагентов, речь. Чистая логика, без файлов и экрана |
-| `src/content` | данные: пиксельные спрайты, палитра, фразы, виды, любимые предметы |
-| `src/app` | приложение: `BuddyApp` (сценарии на события агента, таймер), команды `/buddy`, обучение фразам; порты — интерфейсы к внешнему миру |
-| `src/adapters` | pi (события, команда, инструмент `buddy_phrases`), экран (полоса dock, compact/big/top, полублочные пиксели), файлы (`buddy.json`, свои фразы, `status.json` субагентов) |
+| `src/domain` | Pet rules, mood, activity poses, pack tracking, speech selection and phrase validation; no I/O |
+| `src/content` | Sprites, palettes, Russian content and localized catalogs |
+| `src/app` | Event use cases, commands, language resolution, phrase learning and ports |
+| `src/adapters` | Pi integration, TUI rendering and file storage |
 
-После `npm ci`: тесты домена, приложения и хранилища — `npm test`, проверка типов — `npm run typecheck`.
+After `npm ci`, run `npm test` and `npm run typecheck`. See [translation guidance](docs/localization.md) for catalog structure and adding a language.
