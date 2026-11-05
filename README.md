@@ -6,9 +6,9 @@ A terminal tamagotchi for [pi](https://pi.dev). Your pet lives beside the input 
 
 [Source on GitHub](https://github.com/e-davidenko/pi-buddy) · [Report an issue](https://github.com/e-davidenko/pi-buddy/issues/new)
 
-![pi-buddy demo: shepherd, duck, subagents, speech and toys](https://raw.githubusercontent.com/e-davidenko/pi-buddy/main/media/demo.gif)
+![pi-buddy demo: shepherd, duck, subagents, speech and toys](https://raw.githubusercontent.com/e-davidenko/pi-buddy/main/media/demo.en.gif)
 
-*30 seconds of the main features using the actual pet sprites. Staged demo; recorded with Russian speech.*
+*30 seconds of the main features using the actual pet sprites. Staged demo with English speech.*
 
 ## Install
 

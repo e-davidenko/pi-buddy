@@ -19,7 +19,8 @@
     "media/demo.gif",
     "README.ru.md",
     "docs/behavior.ru.md",
-    "docs/localization.md"
+    "docs/localization.md",
+    "media/demo.en.gif"
   ],
   "pi": {
     "extensions": [
