@@ -1,6 +1,6 @@
 {
   "name": "@euhenio/pi-buddy",
-  "version": "2.4.4",
+  "version": "2.4.5",
   "description": "A terminal tamagotchi for pi: animated pixel pets that react to your coding agent, with English and Russian speech",
   "keywords": [
     "pi-package",
